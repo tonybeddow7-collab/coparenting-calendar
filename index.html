@@ -4,203 +4,128 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Co-Parenting Calendar</title>
-
-<!-- Firebase SDKs (loaded via CDN — no installation required) -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
 <style>
 :root {
-  --p1: #4A90D9;
-  --p1-light: rgba(74,144,217,0.18);
-  --p2: #E8734A;
-  --p2-light: rgba(232,115,74,0.18);
-  --shared: #7B68EE;
-  --shared-light: rgba(123,104,238,0.18);
-  --bg: #f4f6fa;
-  --card: #ffffff;
-  --border: #e0e4ed;
-  --text: #2d3142;
-  --muted: #8a8fa8;
-  --radius: 12px;
-  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --p1: #4A90D9; --p1-light: rgba(74,144,217,0.18);
+  --p2: #E8734A; --p2-light: rgba(232,115,74,0.18);
+  --shared: #7B68EE; --shared-light: rgba(123,104,238,0.18);
+  --child: #27ae60; --child-light: rgba(39,174,96,0.15);
+  --bg: #f4f6fa; --card: #fff; --border: #e0e4ed;
+  --text: #2d3142; --muted: #8a8fa8;
+  --radius: 12px; --shadow: 0 2px 12px rgba(0,0,0,0.08);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-/* ── Setup & Error screens ── */
+/* ── Full-screen overlays ── */
 #config-error, #setup-screen, #loading-screen {
   position: fixed; inset: 0;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  z-index: 500;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  text-align: center;
-  color: #fff;
+  z-index: 500; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 20px; text-align: center; color: #fff;
+  overflow-y: auto;
 }
 #config-error { display: none; }
 #setup-screen { display: none; }
 #loading-screen { display: none; }
-.screen-emoji { font-size: 3rem; margin-bottom: 16px; }
-.screen-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 8px; }
-.screen-sub   { font-size: 0.88rem; opacity: 0.75; line-height: 1.5; max-width: 340px; }
-.setup-cards  { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 380px; margin-top: 28px; }
-.setup-card {
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 16px;
-  padding: 20px;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
-  text-align: left;
-}
-.setup-card:hover { background: rgba(255,255,255,0.18); transform: translateY(-1px); }
-.setup-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
-.setup-card p  { font-size: 0.78rem; opacity: 0.75; }
-.setup-card .card-icon { font-size: 1.6rem; margin-bottom: 8px; }
-.join-input-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-.join-input-row input {
-  flex: 1;
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.3);
-  background: rgba(255,255,255,0.12);
-  color: #fff;
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-}
-.join-input-row input::placeholder { color: rgba(255,255,255,0.4); letter-spacing: 1px; font-weight: 400; }
-.join-input-row input:focus { outline: 2px solid #fff; }
-.setup-btn {
-  padding: 10px 18px;
-  border-radius: 10px;
-  border: none;
-  background: #fff;
-  color: var(--text);
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: opacity 0.15s;
-}
-.setup-btn:hover { opacity: 0.85; }
-.setup-btn.danger { background: #e74c3c; color: #fff; }
-.error-box {
-  background: rgba(231,76,60,0.25);
-  border: 1px solid rgba(231,76,60,0.5);
-  border-radius: 12px;
-  padding: 14px 18px;
-  margin-top: 20px;
-  font-size: 0.82rem;
-  max-width: 380px;
-  line-height: 1.55;
-  text-align: left;
-}
-.error-box code {
-  background: rgba(0,0,0,0.3);
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 0.78rem;
-}
-.spinner {
-  width: 42px; height: 42px;
-  border: 4px solid rgba(255,255,255,0.2);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 16px;
-}
+.screen-emoji { font-size: 2.8rem; margin-bottom: 12px; }
+.screen-title { font-size: 1.45rem; font-weight: 800; margin-bottom: 6px; }
+.screen-sub   { font-size: 0.86rem; opacity: 0.75; line-height: 1.55; max-width: 340px; }
+.spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Header ── */
+/* ── Setup cards ── */
+.setup-inner { width: 100%; max-width: 400px; margin-top: 24px; }
+.setup-create-btn {
+  width: 100%; padding: 18px; border-radius: 16px; border: none;
+  background: linear-gradient(135deg, var(--p1), #2c6fad);
+  color: #fff; font-size: 1rem; font-weight: 800; cursor: pointer;
+  margin-bottom: 20px; box-shadow: 0 4px 20px rgba(74,144,217,0.4);
+  transition: opacity 0.15s, transform 0.1s;
+}
+.setup-create-btn:hover { opacity: 0.92; transform: translateY(-1px); }
+.divider { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; color: rgba(255,255,255,0.4); font-size: 0.78rem; font-weight: 600; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.15); }
+.join-cards { display: flex; flex-direction: column; gap: 10px; }
+.join-card {
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 14px; padding: 14px 16px; text-align: left;
+}
+.join-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.join-role-icon { font-size: 1.3rem; }
+.join-role-info h4 { font-size: 0.9rem; font-weight: 700; }
+.join-role-info p  { font-size: 0.72rem; opacity: 0.65; }
+.join-input-row { display: flex; gap: 8px; }
+.join-input-row input {
+  flex: 1; padding: 9px 12px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.1);
+  color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
+}
+.join-input-row input::placeholder { color: rgba(255,255,255,0.35); letter-spacing: 1px; font-weight: 400; }
+.join-input-row input:focus { outline: 2px solid rgba(255,255,255,0.6); }
+.join-btn {
+  padding: 9px 16px; border-radius: 10px; border: none;
+  background: #fff; color: var(--text); font-size: 0.82rem; font-weight: 700;
+  cursor: pointer; white-space: nowrap; transition: opacity 0.15s;
+}
+.join-btn:hover { opacity: 0.85; }
+.error-box {
+  background: rgba(231,76,60,0.2); border: 1px solid rgba(231,76,60,0.4);
+  border-radius: 12px; padding: 14px 18px; margin-top: 18px;
+  font-size: 0.8rem; max-width: 380px; line-height: 1.55; text-align: left;
+}
+.error-box code { background: rgba(0,0,0,0.3); border-radius: 4px; padding: 2px 5px; font-size: 0.76rem; }
+
+/* ── Main app ── */
 #main-app { display: none; }
+
+/* ── Header ── */
 header {
   background: linear-gradient(135deg, var(--p1) 0%, #2c6fad 100%);
-  color: #fff;
-  padding: 14px 20px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  color: #fff; padding: 12px 16px 10px;
+  display: flex; align-items: center; justify-content: space-between;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
-.header-left h1  { font-size: 1.1rem; font-weight: 800; }
-.header-left p   { font-size: 0.72rem; opacity: 0.8; margin-top: 1px; }
-.sync-pill {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: rgba(255,255,255,0.18);
-  border-radius: 20px;
-  padding: 5px 10px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.sync-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: #2ecc71;
-  transition: background 0.3s;
-}
+.header-left h1 { font-size: 1.05rem; font-weight: 800; }
+.header-left p  { font-size: 0.7rem; opacity: 0.8; margin-top: 2px; }
+.header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.sync-pill { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.18); border-radius: 20px; padding: 4px 9px; font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
+.sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #2ecc71; transition: background 0.3s; }
 .sync-dot.syncing { background: #f39c12; animation: pulse 1s infinite; }
 .sync-dot.error   { background: #e74c3c; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.role-pill {
+  font-size: 0.62rem; font-weight: 700; padding: 2px 8px;
+  border-radius: 10px; background: rgba(255,255,255,0.22); white-space: nowrap;
+}
+.role-pill.child-role { background: rgba(39,174,96,0.35); }
 
 /* ── Nav ── */
-nav {
-  display: flex;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-nav button {
-  flex: 1; min-width: 72px;
-  padding: 10px 4px;
-  border: none; background: none;
-  color: var(--muted);
-  font-size: 0.7rem; font-weight: 600;
-  cursor: pointer;
-  border-bottom: 3px solid transparent;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
+nav { display: flex; background: var(--card); border-bottom: 1px solid var(--border); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+nav button { flex: 1; min-width: 64px; padding: 10px 4px; border: none; background: none; color: var(--muted); font-size: 0.68rem; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; position: relative; }
 nav button.active { color: var(--p1); border-bottom-color: var(--p1); }
 nav button:hover:not(.active) { color: var(--text); background: var(--bg); }
+.unread-badge { display: inline-flex; align-items: center; justify-content: center; background: #e74c3c; color: #fff; border-radius: 8px; font-size: 0.56rem; font-weight: 800; min-width: 14px; height: 14px; padding: 0 3px; margin-left: 2px; vertical-align: middle; }
 
 /* ── Sections ── */
 section { display: none; padding: 16px; max-width: 700px; margin: 0 auto; }
 section.active { display: block; }
 
+/* ── Read-only banner ── */
+.readonly-banner {
+  background: var(--child-light); border: 1px solid var(--child);
+  border-radius: 10px; padding: 8px 14px; margin-bottom: 12px;
+  font-size: 0.78rem; font-weight: 600; color: #1e8449;
+  display: flex; align-items: center; gap: 6px;
+}
+
 /* ── Calendar controls ── */
-.cal-controls {
-  display: flex; align-items: center; justify-content: space-between;
-  background: var(--card); border-radius: var(--radius);
-  padding: 12px 16px; margin-bottom: 12px; box-shadow: var(--shadow);
-}
+.cal-controls { display: flex; align-items: center; justify-content: space-between; background: var(--card); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 12px; box-shadow: var(--shadow); }
 .cal-controls h2 { font-size: 1.05rem; font-weight: 700; }
-.icon-btn {
-  width: 34px; height: 34px; border-radius: 8px;
-  border: 1px solid var(--border); background: var(--bg);
-  cursor: pointer; font-size: 1rem;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s;
-}
+.icon-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
 .icon-btn:hover { background: var(--border); }
 
 /* ── Legend ── */
@@ -210,43 +135,30 @@ section.active { display: block; }
 
 /* ── Calendar grid ── */
 .cal-grid { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-.day-headers { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--bg); border-bottom: 1px solid var(--border); }
-.day-headers span {
-  text-align: center; font-size: 0.7rem; font-weight: 700;
-  color: var(--muted); padding: 8px 2px; text-transform: uppercase; letter-spacing: 0.5px;
-}
-.cal-days { display: grid; grid-template-columns: repeat(7, 1fr); }
-.cal-day {
-  min-height: 64px; padding: 4px;
-  border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
-  cursor: pointer; position: relative; transition: filter 0.1s;
-}
+.day-headers { display: grid; grid-template-columns: repeat(7,1fr); background: var(--bg); border-bottom: 1px solid var(--border); }
+.day-headers span { text-align: center; font-size: 0.68rem; font-weight: 700; color: var(--muted); padding: 8px 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+.cal-days { display: grid; grid-template-columns: repeat(7,1fr); }
+.cal-day { min-height: 64px; padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: pointer; transition: filter 0.1s; }
 .cal-day:nth-child(7n) { border-right: none; }
 .cal-day:hover { filter: brightness(0.95); }
 .cal-day.empty { background: var(--bg); cursor: default; opacity: 0.4; }
 .cal-day.empty:hover { filter: none; }
+.cal-day.readonly-mode { cursor: default; }
+.cal-day.readonly-mode:hover { filter: none; }
 .cal-day.p1     { background: var(--p1-light); }
 .cal-day.p2     { background: var(--p2-light); }
 .cal-day.shared { background: var(--shared-light); }
-.cal-day.today .day-num {
-  background: var(--p1); color: #fff; border-radius: 50%;
-  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
-}
-.day-num { font-size: 0.78rem; font-weight: 700; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
-.day-label { font-size: 0.58rem; font-weight: 600; color: var(--muted); line-height: 1.1; margin-bottom: 2px; }
+.cal-day.today .day-num { background: var(--p1); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.day-num   { font-size: 0.78rem; font-weight: 700; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
+.day-label { font-size: 0.56rem; font-weight: 600; color: var(--muted); line-height: 1.1; margin-bottom: 2px; }
 .event-dots { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 2px; }
-.event-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text); opacity: 0.6; }
+.event-dot  { width: 6px; height: 6px; border-radius: 50%; background: var(--text); opacity: 0.6; }
 
 /* ── Modal ── */
 .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: flex-end; justify-content: center; }
 .overlay.open { display: flex; }
 @media (min-width: 500px) { .overlay { align-items: center; } }
-.modal {
-  background: var(--card); border-radius: 20px 20px 0 0;
-  width: 100%; max-width: 480px;
-  padding: 24px 20px 32px; max-height: 90vh; overflow-y: auto;
-  animation: slideUp 0.25s ease;
-}
+.modal { background: var(--card); border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; padding: 24px 20px 32px; max-height: 90vh; overflow-y: auto; animation: slideUp 0.25s ease; }
 @media (min-width: 500px) { .modal { border-radius: 20px; } }
 @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
 .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
@@ -270,7 +182,7 @@ section.active { display: block; }
 .del-btn:hover { color: #e74c3c; background: #fce; }
 .add-event-row { display: flex; gap: 8px; margin-bottom: 4px; }
 .add-event-row select { width: 44px; padding: 8px 4px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); font-size: 1rem; cursor: pointer; }
-.add-event-row input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.82rem; background: var(--bg); }
+.add-event-row input  { flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.82rem; background: var(--bg); }
 .add-event-row input:focus, .add-event-row select:focus { outline: 2px solid var(--p1); border-color: var(--p1); }
 .add-event-row button { padding: 8px 14px; border-radius: 8px; border: none; background: var(--p1); color: #fff; font-weight: 700; cursor: pointer; font-size: 0.82rem; }
 .save-btn { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--p1); color: #fff; font-size: 0.9rem; font-weight: 700; cursor: pointer; margin-top: 14px; }
@@ -282,21 +194,20 @@ section.active { display: block; }
 .schedule-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .sched-btn { padding: 12px 8px; border-radius: 10px; border: 2px solid var(--border); background: var(--bg); cursor: pointer; font-size: 0.78rem; font-weight: 600; text-align: center; transition: all 0.15s; line-height: 1.3; }
 .sched-btn .sched-icon { font-size: 1.2rem; display: block; margin-bottom: 4px; }
-.sched-btn:hover { border-color: var(--p1); color: var(--p1); }
+.sched-btn:hover:not(:disabled) { border-color: var(--p1); color: var(--p1); }
 .sched-btn.selected { border-color: var(--p1); background: var(--p1-light); color: var(--p1); }
-
 .form-row { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 .form-row label { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
 .form-row input[type="date"], .form-row select { padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.85rem; background: var(--bg); width: 100%; }
 .apply-btn { padding: 12px; border-radius: 10px; border: none; background: var(--p1); color: #fff; font-size: 0.88rem; font-weight: 700; cursor: pointer; margin-top: 8px; width: 100%; }
 .apply-btn:hover { opacity: 0.9; }
-
-.name-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.name-row { display: flex; gap: 8px; margin-bottom: 10px; }
 .name-row > div { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .name-row label { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
 .name-input { padding: 8px 10px; border-radius: 8px; border: 2px solid var(--border); font-size: 0.85rem; font-weight: 600; background: var(--bg); width: 100%; }
-.name-input.p1 { border-color: var(--p1); }
-.name-input.p2 { border-color: var(--p2); }
+.name-input.p1    { border-color: var(--p1); }
+.name-input.p2    { border-color: var(--p2); }
+.name-input.child { border-color: var(--child); }
 
 /* ── Events tab ── */
 .events-filter { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; }
@@ -312,14 +223,75 @@ section.active { display: block; }
 .event-body .ev-meta  { font-size: 0.73rem; color: var(--muted); margin-top: 1px; }
 .ev-icon-large { font-size: 1.3rem; }
 
-/* ── Join code display ── */
-.join-code-display {
+/* ── Three-codes display ── */
+.codes-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.code-row {
   display: flex; align-items: center; gap: 10px;
-  background: var(--bg); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;
+  background: var(--bg); border-radius: 10px; padding: 10px 12px;
+  border-left: 4px solid var(--border);
 }
-.join-code-display .code-text { font-size: 1.4rem; font-weight: 800; letter-spacing: 4px; color: var(--p1); flex: 1; }
-.copy-code-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-size: 0.78rem; font-weight: 700; color: var(--text); white-space: nowrap; }
-.copy-code-btn:hover { background: var(--p1); color: #fff; border-color: var(--p1); }
+.code-row.p1-row   { border-left-color: var(--p1); }
+.code-row.p2-row   { border-left-color: var(--p2); }
+.code-row.child-row { border-left-color: var(--child); }
+.code-role { font-size: 0.72rem; font-weight: 700; color: var(--muted); min-width: 52px; }
+.code-value { font-size: 1.15rem; font-weight: 800; letter-spacing: 3px; flex: 1; }
+.code-row.p1-row   .code-value { color: var(--p1); }
+.code-row.p2-row   .code-value { color: var(--p2); }
+.code-row.child-row .code-value { color: var(--child); }
+.copy-btn { padding: 5px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-size: 0.74rem; font-weight: 700; white-space: nowrap; transition: all 0.15s; }
+.copy-btn:hover { background: var(--p1); color: #fff; border-color: var(--p1); }
+
+/* ── Info / instruction box ── */
+.info-box { background: #e8f4fd; border-left: 4px solid var(--p1); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 0.8rem; color: var(--text); line-height: 1.55; margin-bottom: 12px; }
+.info-box strong { display: block; margin-bottom: 2px; }
+
+/* ── Messages tab ── */
+#tab-messages {
+  padding: 0 !important; max-width: 700px; margin: 0 auto;
+  height: calc(100vh - 110px); height: calc(100dvh - 110px);
+  display: none; flex-direction: column;
+}
+#tab-messages.active { display: flex; }
+
+.thread-tabs {
+  display: flex; overflow-x: auto; background: var(--card);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+}
+.thread-tab {
+  flex-shrink: 0; padding: 10px 14px; border: none; background: none;
+  color: var(--muted); font-size: 0.74rem; font-weight: 600; cursor: pointer;
+  border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.2s;
+  display: flex; align-items: center; gap: 4px;
+}
+.thread-tab.active  { color: var(--p1); border-bottom-color: var(--p1); }
+.thread-tab:hover:not(.active) { color: var(--text); background: var(--bg); }
+.thread-badge { display: inline-flex; align-items: center; justify-content: center; background: #e74c3c; color: #fff; border-radius: 8px; font-size: 0.55rem; font-weight: 800; min-width: 14px; height: 14px; padding: 0 3px; }
+
+.chat-area { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; -webkit-overflow-scrolling: touch; }
+.chat-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--muted); font-size: 0.85rem; text-align: center; padding: 40px; gap: 8px; }
+.chat-empty .ce-icon { font-size: 2.2rem; }
+
+.msg-row { display: flex; flex-direction: column; max-width: 78%; margin-bottom: 1px; }
+.msg-row.mine   { align-self: flex-end;   align-items: flex-end; }
+.msg-row.theirs { align-self: flex-start; align-items: flex-start; }
+.msg-row.new-group { margin-top: 10px; }
+.msg-meta   { font-size: 0.64rem; color: var(--muted); margin-bottom: 3px; padding: 0 4px; }
+.msg-bubble { padding: 9px 13px; border-radius: 18px; font-size: 0.875rem; line-height: 1.45; word-break: break-word; white-space: pre-wrap; }
+.msg-bubble.mine   { background: var(--p1); color: #fff; border-bottom-right-radius: 5px; }
+.msg-bubble.theirs { background: var(--card); color: var(--text); border-bottom-left-radius: 5px; box-shadow: var(--shadow); }
+.msg-bubble.child-sender { background: var(--child); color: #fff; }
+
+.chat-input-bar { display: flex; gap: 8px; padding: 10px 14px 14px; background: var(--card); border-top: 1px solid var(--border); align-items: flex-end; flex-shrink: 0; }
+.chat-input-bar textarea { flex: 1; padding: 9px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg); font-size: 0.875rem; font-family: inherit; resize: none; max-height: 100px; overflow-y: auto; line-height: 1.4; }
+.chat-input-bar textarea:focus { outline: 2px solid var(--p1); border-color: var(--p1); }
+.chat-send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--p1); color: #fff; font-size: 1.1rem; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: opacity 0.15s, transform 0.1s; }
+.chat-send-btn:hover  { opacity: 0.88; }
+.chat-send-btn:active { transform: scale(0.92); }
+
+/* ── Thread description chip ── */
+.thread-desc { font-size: 0.7rem; color: var(--muted); text-align: center; padding: 6px; border-bottom: 1px solid var(--border); background: var(--bg); flex-shrink: 0; }
 
 /* ── Empty state ── */
 .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
@@ -327,217 +299,83 @@ section.active { display: block; }
 .empty-state p { font-size: 0.85rem; }
 
 /* ── Toast ── */
-.toast {
-  position: fixed; bottom: 20px; left: 50%;
-  transform: translateX(-50%) translateY(80px);
-  background: var(--text); color: #fff;
-  padding: 10px 20px; border-radius: 20px;
-  font-size: 0.82rem; font-weight: 600; z-index: 600;
-  transition: transform 0.3s; white-space: nowrap; box-shadow: var(--shadow);
-}
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; z-index: 600; transition: transform 0.3s; white-space: nowrap; box-shadow: var(--shadow); }
 .toast.show { transform: translateX(-50%) translateY(0); }
-
-/* ── Info box ── */
-.info-box { background: #e8f4fd; border-left: 4px solid var(--p1); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 0.8rem; color: var(--text); line-height: 1.55; margin-bottom: 12px; }
-.info-box strong { display: block; margin-bottom: 2px; }
-
-/* ── Messages tab ── */
-#tab-messages {
-  padding: 0 !important;
-  height: calc(100vh - 110px);
-  height: calc(100dvh - 110px);
-  display: none;
-  flex-direction: column;
-  max-width: 700px;
-  margin: 0 auto;
-}
-#tab-messages.active { display: flex; }
-
-.identity-wrap {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 24px;
-  text-align: center;
-  gap: 10px;
-}
-.identity-wrap h3 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
-.identity-wrap p  { font-size: 0.82rem; color: var(--muted); margin-bottom: 8px; }
-.id-btn {
-  width: 100%; max-width: 260px;
-  padding: 13px 20px;
-  border-radius: 12px;
-  border: 2px solid var(--border);
-  background: var(--card);
-  cursor: pointer;
-  font-size: 0.88rem;
-  font-weight: 700;
-  transition: all 0.15s;
-  box-shadow: var(--shadow);
-}
-.id-btn:hover { border-color: var(--p1); color: var(--p1); background: var(--p1-light); }
-
-.chat-area-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  -webkit-overflow-scrolling: touch;
-}
-.chat-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--muted);
-  font-size: 0.85rem;
-  text-align: center;
-  padding: 40px;
-  gap: 8px;
-}
-.chat-empty .ce-icon { font-size: 2.2rem; }
-
-.msg-row { display: flex; flex-direction: column; max-width: 78%; margin-bottom: 2px; }
-.msg-row.mine   { align-self: flex-end;   align-items: flex-end; }
-.msg-row.theirs { align-self: flex-start; align-items: flex-start; }
-.msg-row + .msg-row.mine.new-sender,
-.msg-row + .msg-row.theirs.new-sender { margin-top: 10px; }
-
-.msg-meta { font-size: 0.65rem; color: var(--muted); margin-bottom: 3px; padding: 0 4px; }
-.msg-bubble {
-  padding: 9px 13px;
-  border-radius: 18px;
-  font-size: 0.875rem;
-  line-height: 1.45;
-  word-break: break-word;
-  white-space: pre-wrap;
-}
-.msg-bubble.mine   { background: var(--p1); color: #fff; border-bottom-right-radius: 5px; }
-.msg-bubble.theirs { background: var(--card); color: var(--text); border-bottom-left-radius: 5px; box-shadow: var(--shadow); }
-
-.chat-input-bar {
-  display: flex;
-  gap: 8px;
-  padding: 10px 14px 14px;
-  background: var(--card);
-  border-top: 1px solid var(--border);
-  align-items: flex-end;
-}
-.chat-input-bar textarea {
-  flex: 1;
-  padding: 9px 13px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  font-size: 0.875rem;
-  font-family: inherit;
-  resize: none;
-  max-height: 100px;
-  overflow-y: auto;
-  line-height: 1.4;
-}
-.chat-input-bar textarea:focus { outline: 2px solid var(--p1); border-color: var(--p1); }
-.chat-send-btn {
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: var(--p1);
-  color: #fff;
-  font-size: 1.1rem;
-  cursor: pointer;
-  flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  transition: opacity 0.15s, transform 0.1s;
-}
-.chat-send-btn:hover  { opacity: 0.88; }
-.chat-send-btn:active { transform: scale(0.92); }
-
-.change-id-btn {
-  font-size: 0.7rem;
-  color: var(--muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  text-decoration: underline;
-  flex-shrink: 0;
-}
-.change-id-btn:hover { color: var(--text); }
-
-/* ── Unread badge on nav ── */
-.unread-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #e74c3c;
-  color: #fff;
-  border-radius: 10px;
-  font-size: 0.58rem;
-  font-weight: 800;
-  min-width: 15px;
-  height: 15px;
-  padding: 0 3px;
-  margin-left: 3px;
-  vertical-align: middle;
-  line-height: 1;
-}
 </style>
 </head>
 <body>
 
-<!-- ══════════════ CONFIG ERROR SCREEN ══════════════ -->
+<!-- ══════════════ CONFIG ERROR ══════════════ -->
 <div id="config-error">
   <div class="screen-emoji">🔧</div>
   <div class="screen-title">Firebase Not Configured</div>
-  <div class="screen-sub">Paste your Firebase config into this HTML file to enable cloud sync.</div>
-  <div class="error-box">
-    <strong>How to fix:</strong><br>
-    Open this HTML file in a text editor, find the section labelled<br>
-    <code>PASTE YOUR FIREBASE CONFIG HERE</code><br><br>
-    Replace all six <code>YOUR_...</code> placeholder values with the real values from your Firebase project console.<br><br>
-    See the Settings tab instructions inside the app for the full step-by-step guide.
+  <div class="screen-sub">Open this file in a text editor and paste your Firebase config where shown.</div>
+  <div class="error-box" style="margin-top:16px;">
+    Find the block labelled <code>PASTE YOUR FIREBASE CONFIG HERE</code> and replace each <code>YOUR_...</code> value. See Settings → Firebase Setup Instructions for a full guide.
   </div>
 </div>
 
-<!-- ══════════════ LOADING SCREEN ══════════════ -->
+<!-- ══════════════ LOADING ══════════════ -->
 <div id="loading-screen">
   <div class="spinner"></div>
   <div class="screen-title" style="font-size:1.1rem">Connecting…</div>
-  <div class="screen-sub" id="loading-msg">Reaching your shared calendar</div>
+  <div class="screen-sub" id="loading-msg">Reaching your calendar</div>
 </div>
 
-<!-- ══════════════ SETUP SCREEN ══════════════ -->
+<!-- ══════════════ SETUP ══════════════ -->
 <div id="setup-screen">
   <div class="screen-emoji">👨‍👧‍👦</div>
   <div class="screen-title">Co-Parenting Calendar</div>
-  <div class="screen-sub">Set up your shared calendar so both parents stay in sync — in real time.</div>
-  <div class="setup-cards">
+  <div class="screen-sub">Live sync between parents and child — all from one shared file.</div>
 
-    <div class="setup-card" onclick="showCreateFlow()">
-      <div class="card-icon">✨</div>
-      <h3>Create a New Calendar</h3>
-      <p>Start fresh. You'll get a 6-letter join code to share with the other parent.</p>
-    </div>
+  <div class="setup-inner">
+    <button class="setup-create-btn" onclick="createCalendar()">
+      ✨ Create a New Calendar<br>
+      <span style="font-size:0.76rem;font-weight:500;opacity:0.85">You'll get 3 separate join codes to share</span>
+    </button>
 
-    <div class="setup-card" id="join-card">
-      <div class="card-icon">🔗</div>
-      <h3>Join an Existing Calendar</h3>
-      <p>Enter the join code the other parent shared with you.</p>
-      <div class="join-input-row" onclick="event.stopPropagation()">
-        <input type="text" id="join-code-input" maxlength="6" placeholder="ABC123"
-               oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
-               onkeydown="if(event.key==='Enter') joinCalendar()">
-        <button class="setup-btn" onclick="joinCalendar()">Join</button>
+    <div class="divider">— or join with your code —</div>
+
+    <div class="join-cards">
+      <div class="join-card">
+        <div class="join-card-header">
+          <div class="join-role-icon">👤</div>
+          <div class="join-role-info"><h4>Join as Parent 1</h4><p>Full access · use your Parent 1 code</p></div>
+        </div>
+        <div class="join-input-row">
+          <input id="code-p1" type="text" maxlength="6" placeholder="ABC123"
+            oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+            onkeydown="if(event.key==='Enter') joinWithCode(this.value)">
+          <button class="join-btn" onclick="joinWithCode(document.getElementById('code-p1').value)">Join</button>
+        </div>
+      </div>
+
+      <div class="join-card">
+        <div class="join-card-header">
+          <div class="join-role-icon">👤</div>
+          <div class="join-role-info"><h4>Join as Parent 2</h4><p>Full access · use your Parent 2 code</p></div>
+        </div>
+        <div class="join-input-row">
+          <input id="code-p2" type="text" maxlength="6" placeholder="DEF456"
+            oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+            onkeydown="if(event.key==='Enter') joinWithCode(this.value)">
+          <button class="join-btn" onclick="joinWithCode(document.getElementById('code-p2').value)">Join</button>
+        </div>
+      </div>
+
+      <div class="join-card">
+        <div class="join-card-header">
+          <div class="join-role-icon">🧒</div>
+          <div class="join-role-info"><h4>Join as Child</h4><p>View only · use your Child code</p></div>
+        </div>
+        <div class="join-input-row">
+          <input id="code-child" type="text" maxlength="6" placeholder="GHI789"
+            oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+            onkeydown="if(event.key==='Enter') joinWithCode(this.value)">
+          <button class="join-btn" onclick="joinWithCode(document.getElementById('code-child').value)">Join</button>
+        </div>
       </div>
     </div>
-
   </div>
 </div>
 
@@ -549,9 +387,9 @@ section.active { display: block; }
     <h1>👨‍👧‍👦 Co-Parenting Calendar</h1>
     <p id="header-sub">Shared calendar</p>
   </div>
-  <div class="sync-pill">
-    <div class="sync-dot" id="sync-dot"></div>
-    <span id="sync-label">Synced</span>
+  <div class="header-right">
+    <div class="sync-pill"><div class="sync-dot" id="sync-dot"></div><span id="sync-label">Synced</span></div>
+    <div class="role-pill" id="role-pill">Parent 1</div>
   </div>
 </header>
 
@@ -560,11 +398,12 @@ section.active { display: block; }
   <button onclick="showTab('schedule')">🔄 Schedule</button>
   <button onclick="showTab('events')">📋 Events</button>
   <button onclick="showTab('messages')" id="nav-messages">💬 Messages<span class="unread-badge" id="unread-badge" style="display:none">0</span></button>
-  <button onclick="showTab('settings')">⚙️ Settings</button>
+  <button onclick="showTab('settings')" id="nav-settings">⚙️ Settings</button>
 </nav>
 
 <!-- ── CALENDAR TAB ── -->
 <section id="tab-calendar" class="active">
+  <div id="cal-readonly-banner" class="readonly-banner" style="display:none">👀 View only — you can see the calendar but cannot make changes.</div>
   <div class="cal-controls">
     <button class="icon-btn" onclick="changeMonth(-1)">‹</button>
     <h2 id="month-label"></h2>
@@ -576,72 +415,47 @@ section.active { display: block; }
     <div class="legend-item"><div class="legend-dot" style="background:var(--shared)"></div><span>Shared</span></div>
   </div>
   <div class="cal-grid">
-    <div class="day-headers">
-      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
-    </div>
+    <div class="day-headers"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
     <div class="cal-days" id="cal-days"></div>
   </div>
 </section>
 
 <!-- ── SCHEDULE TAB ── -->
 <section id="tab-schedule">
+  <div id="sched-readonly-banner" class="readonly-banner" style="display:none">👀 View only — schedule templates are visible but only parents can apply them.</div>
   <div class="card">
     <h3>Parent Names</h3>
     <div class="name-row">
-      <div>
-        <label>Parent 1</label>
-        <input class="name-input p1" id="name-p1" type="text" placeholder="e.g. Mom" maxlength="20" oninput="saveNames()">
-      </div>
-      <div>
-        <label>Parent 2</label>
-        <input class="name-input p2" id="name-p2" type="text" placeholder="e.g. Dad" maxlength="20" oninput="saveNames()">
-      </div>
+      <div><label>Parent 1</label><input class="name-input p1" id="name-p1" type="text" placeholder="e.g. Mom" maxlength="20" oninput="saveNames()"></div>
+      <div><label>Parent 2</label><input class="name-input p2" id="name-p2" type="text" placeholder="e.g. Dad" maxlength="20" oninput="saveNames()"></div>
+    </div>
+    <div class="name-row">
+      <div><label>Child's Name</label><input class="name-input child" id="name-child" type="text" placeholder="e.g. Emma" maxlength="20" oninput="saveNames()"></div>
     </div>
   </div>
-
   <div class="card">
     <h3>Quick Schedule Templates</h3>
     <div class="schedule-grid">
-      <button class="sched-btn" onclick="selectSchedule('alt-week')" id="sched-alt-week">
-        <span class="sched-icon">📆</span>Alternating Weeks<br><small>7 days each parent</small>
-      </button>
-      <button class="sched-btn" onclick="selectSchedule('223')" id="sched-223">
-        <span class="sched-icon">🔁</span>2-2-3 Rotation<br><small>2 days / 2 days / 3 days</small>
-      </button>
-      <button class="sched-btn" onclick="selectSchedule('week-on-off')" id="sched-week-on-off">
-        <span class="sched-icon">🗓️</span>Week On / Week Off<br><small>Starting Sunday</small>
-      </button>
-      <button class="sched-btn" onclick="selectSchedule('5-2')" id="sched-5-2">
-        <span class="sched-icon">📊</span>5-2 Split<br><small>P1: Mon–Fri · P2: Sat–Sun</small>
-      </button>
-      <button class="sched-btn" onclick="selectSchedule('3-4')" id="sched-3-4">
-        <span class="sched-icon">⚖️</span>3-4 Rotation<br><small>Alternating 3 and 4 days</small>
-      </button>
-      <button class="sched-btn" onclick="selectSchedule('custom')" id="sched-custom">
-        <span class="sched-icon">✏️</span>Manual / Custom<br><small>Tap days to assign</small>
-      </button>
+      <button class="sched-btn" onclick="selectSchedule('alt-week')" id="sched-alt-week"><span class="sched-icon">📆</span>Alternating Weeks<br><small>7 days each parent</small></button>
+      <button class="sched-btn" onclick="selectSchedule('223')" id="sched-223"><span class="sched-icon">🔁</span>2-2-3 Rotation<br><small>2 days / 2 days / 3 days</small></button>
+      <button class="sched-btn" onclick="selectSchedule('week-on-off')" id="sched-week-on-off"><span class="sched-icon">🗓️</span>Week On / Week Off<br><small>Starting Sunday</small></button>
+      <button class="sched-btn" onclick="selectSchedule('5-2')" id="sched-5-2"><span class="sched-icon">📊</span>5-2 Split<br><small>P1: Mon–Fri · P2: Sat–Sun</small></button>
+      <button class="sched-btn" onclick="selectSchedule('3-4')" id="sched-3-4"><span class="sched-icon">⚖️</span>3-4 Rotation<br><small>Alternating 3 and 4 days</small></button>
+      <button class="sched-btn" onclick="selectSchedule('custom')" id="sched-custom"><span class="sched-icon">✏️</span>Manual / Custom<br><small>Tap days to assign</small></button>
     </div>
     <div class="form-row" id="schedule-options" style="display:none">
       <label>Schedule starts on</label>
       <input type="date" id="sched-start-date">
       <label>First custody block goes to</label>
-      <select id="sched-first-parent">
-        <option value="p1">Parent 1</option>
-        <option value="p2">Parent 2</option>
-      </select>
+      <select id="sched-first-parent"><option value="p1">Parent 1</option><option value="p2">Parent 2</option></select>
       <label>Apply to how many months ahead?</label>
-      <select id="sched-months">
-        <option value="3">3 months</option>
-        <option value="6">6 months</option>
-        <option value="12">12 months</option>
-      </select>
-      <button class="apply-btn" onclick="applySchedule()">✅ Apply Schedule</button>
+      <select id="sched-months"><option value="3">3 months</option><option value="6">6 months</option><option value="12">12 months</option></select>
+      <button class="apply-btn" id="apply-sched-btn" onclick="applySchedule()">✅ Apply Schedule</button>
     </div>
   </div>
-
-  <div class="card">
+  <div class="card" id="clear-card">
     <h3>Clear Calendar</h3>
-    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">Remove all parent assignments (events are kept). This syncs to both parents.</p>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">Remove all parent assignments (events kept). Syncs to everyone.</p>
     <button class="apply-btn" style="background:#e74c3c;" onclick="clearAssignments()">🗑️ Clear All Assignments</button>
   </div>
 </section>
@@ -659,57 +473,70 @@ section.active { display: block; }
   <ul class="events-list-full" id="events-list-full"></ul>
 </section>
 
+<!-- ── MESSAGES TAB ── -->
+<section id="tab-messages">
+  <div class="thread-tabs" id="thread-tabs"></div>
+  <div class="thread-desc" id="thread-desc"></div>
+  <div class="chat-area">
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-empty"><div class="ce-icon">💬</div><p>Loading messages…</p></div>
+    </div>
+    <div class="chat-input-bar">
+      <textarea id="msg-input" rows="1" placeholder="Type a message…" maxlength="1000"
+        oninput="autoResizeTextarea(this)"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
+      <button class="chat-send-btn" onclick="sendMessage()" title="Send">➤</button>
+    </div>
+  </div>
+</section>
+
 <!-- ── SETTINGS TAB ── -->
 <section id="tab-settings">
-
   <div class="card">
-    <h3>📤 Share This Calendar</h3>
+    <h3>📤 Join Codes — Share With Your Family</h3>
     <div class="info-box">
-      <strong>How to invite the other parent:</strong>
-      Copy the join code below and send it to them (text, email, or WhatsApp). They open this same HTML file, tap "Join an Existing Calendar", and enter the code. Both of you will then share the same calendar with live updates.
+      <strong>How it works:</strong>
+      Send each person their code. They open this same HTML file, tap the matching join option, and enter the code. All three of you will share the same live calendar.
     </div>
-    <p style="font-size:0.78rem;font-weight:600;color:var(--muted);margin-bottom:6px;">YOUR JOIN CODE</p>
-    <div class="join-code-display">
-      <span class="code-text" id="settings-join-code">——</span>
-      <button class="copy-code-btn" onclick="copyJoinCode()">Copy Code</button>
+    <div class="codes-grid">
+      <div class="code-row p1-row">
+        <div class="code-role">Parent 1</div>
+        <div class="code-value" id="code-display-p1">——</div>
+        <button class="copy-btn" onclick="copyCode('p1')">Copy</button>
+      </div>
+      <div class="code-row p2-row">
+        <div class="code-role">Parent 2</div>
+        <div class="code-value" id="code-display-p2">——</div>
+        <button class="copy-btn" onclick="copyCode('p2')">Copy</button>
+      </div>
+      <div class="code-row child-row">
+        <div class="code-role">Child</div>
+        <div class="code-value" id="code-display-child">——</div>
+        <button class="copy-btn" onclick="copyCode('child')">Copy</button>
+      </div>
     </div>
-    <p style="font-size:0.75rem;color:var(--muted);">Keep this code private — anyone with it can view and edit your calendar.</p>
+    <p style="font-size:0.74rem;color:var(--muted);">Keep these codes within your family — anyone with a code can access the calendar.</p>
   </div>
 
   <div class="card">
     <h3>Color Theme</h3>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-      <div>
-        <label style="font-size:0.75rem;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Parent 1 Color</label>
-        <input type="color" id="color-p1" value="#4A90D9" onchange="updateColors()" style="width:50px;height:34px;border:none;cursor:pointer;border-radius:8px;">
-      </div>
-      <div>
-        <label style="font-size:0.75rem;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Parent 2 Color</label>
-        <input type="color" id="color-p2" value="#E8734A" onchange="updateColors()" style="width:50px;height:34px;border:none;cursor:pointer;border-radius:8px;">
-      </div>
+      <div><label style="font-size:0.75rem;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Parent 1</label><input type="color" id="color-p1" value="#4A90D9" onchange="updateColors()" style="width:48px;height:34px;border:none;cursor:pointer;border-radius:8px;"></div>
+      <div><label style="font-size:0.75rem;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Parent 2</label><input type="color" id="color-p2" value="#E8734A" onchange="updateColors()" style="width:48px;height:34px;border:none;cursor:pointer;border-radius:8px;"></div>
     </div>
     <button class="apply-btn" style="background:var(--muted);" onclick="resetColors()">Reset to Default Colors</button>
   </div>
 
   <div class="card">
-    <h3>How Firebase Sync Works</h3>
-    <p style="font-size:0.82rem;color:var(--muted);line-height:1.6;">
-      All calendar data is stored in <strong>Firebase Firestore</strong> — a free, real-time cloud database.
-      Changes from either parent appear on the other's screen within 1–3 seconds.
-      Your data is identified only by the join code — no accounts or passwords needed.
-    </p>
-  </div>
-
-  <div class="card">
     <h3>⚙️ Firebase Setup Instructions</h3>
     <p style="font-size:0.82rem;color:var(--muted);line-height:1.7;">
-      <strong>Step 1</strong> — Go to <strong>console.firebase.google.com</strong> and sign in with a Google account.<br>
-      <strong>Step 2</strong> — Click <em>Add project</em>, give it a name (e.g. "our-calendar"), skip Analytics, click <em>Create project</em>.<br>
-      <strong>Step 3</strong> — Inside your project, click the <strong>&lt;/&gt;</strong> (Web) icon to add a web app. Give it a nickname and click <em>Register app</em>.<br>
-      <strong>Step 4</strong> — Firebase shows you a <em>firebaseConfig</em> object. Copy all 6 values.<br>
-      <strong>Step 5</strong> — Open this HTML file in a text editor. Find the block labelled <code style="background:var(--bg);padding:2px 5px;border-radius:4px;font-size:0.78rem">PASTE YOUR FIREBASE CONFIG HERE</code> and replace each <code style="background:var(--bg);padding:2px 5px;border-radius:4px;font-size:0.78rem">YOUR_...</code> placeholder.<br>
-      <strong>Step 6</strong> — In Firebase console, go to <em>Firestore Database</em> → <em>Create database</em> → choose <em>Start in test mode</em> → pick any region → Done.<br>
-      <strong>Step 7</strong> — Save the file and open it in your browser. Done!
+      <strong>Step 1</strong> — Go to <strong>console.firebase.google.com</strong> and sign in with Google.<br>
+      <strong>Step 2</strong> — Click <em>Add project</em>, name it, skip Analytics, click <em>Create</em>.<br>
+      <strong>Step 3</strong> — Click the <strong>&lt;/&gt;</strong> Web icon, give it a nickname, click <em>Register app</em>.<br>
+      <strong>Step 4</strong> — Copy the <em>firebaseConfig</em> values shown.<br>
+      <strong>Step 5</strong> — Open this HTML file in a text editor, find <code style="background:var(--bg);padding:2px 5px;border-radius:4px;font-size:0.78rem">PASTE YOUR FIREBASE CONFIG HERE</code> and replace all six <code style="background:var(--bg);padding:2px 5px;border-radius:4px;font-size:0.78rem">YOUR_...</code> values.<br>
+      <strong>Step 6</strong> — Go to <em>Firestore Database</em> → <em>Create database</em> → <em>Start in test mode</em> → pick any region → Done.<br>
+      <strong>Step 7</strong> — Save and open the file. Done!
     </p>
   </div>
 
@@ -719,46 +546,16 @@ section.active { display: block; }
     <button class="apply-btn" onclick="exportData()">📤 Export Backup (copy to clipboard)</button>
     <div style="margin-top:10px;">
       <label style="font-size:0.8rem;font-weight:600;color:var(--muted);">Paste backup to restore:</label>
-      <textarea id="import-box" rows="4"
-        style="width:100%;margin-top:6px;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:0.75rem;background:var(--bg);resize:vertical;"></textarea>
+      <textarea id="import-box" rows="4" style="width:100%;margin-top:6px;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:0.75rem;background:var(--bg);resize:vertical;"></textarea>
       <button class="apply-btn" style="margin-top:6px;" onclick="importData()">📥 Restore from Backup</button>
     </div>
   </div>
 
   <div class="card">
     <h3>Disconnect</h3>
-    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">Forget this calendar on this device. You can rejoin using the join code.</p>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">Forget this calendar on this device. Rejoin any time with your code.</p>
     <button class="apply-btn" style="background:#e74c3c;" onclick="disconnectCalendar()">🔌 Disconnect from Calendar</button>
   </div>
-
-</section>
-
-<!-- ── MESSAGES TAB ── -->
-<section id="tab-messages">
-
-  <!-- Identity selector (shown until parent picks who they are) -->
-  <div class="identity-wrap" id="identity-wrap">
-    <div style="font-size:2rem">💬</div>
-    <h3>Who are you on this calendar?</h3>
-    <p>This is saved on your device only — the other parent does the same on theirs.</p>
-    <button class="id-btn" id="id-btn-p1" onclick="setIdentity('p1')">👤 I am Parent 1</button>
-    <button class="id-btn" id="id-btn-p2" onclick="setIdentity('p2')">👤 I am Parent 2</button>
-  </div>
-
-  <!-- Chat area (shown after identity is set) -->
-  <div class="chat-area-wrap" id="chat-area-wrap" style="display:none">
-    <div class="chat-messages" id="chat-messages">
-      <div class="chat-empty"><div class="ce-icon">💬</div><p>No messages yet.<br>Send the first one!</p></div>
-    </div>
-    <div class="chat-input-bar">
-      <button class="change-id-btn" onclick="resetIdentity()" title="Change who you are">👤</button>
-      <textarea id="msg-input" rows="1" placeholder="Type a message…" maxlength="1000"
-        oninput="autoResizeTextarea(this)"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
-      <button class="chat-send-btn" onclick="sendMessage()" title="Send">➤</button>
-    </div>
-  </div>
-
 </section>
 
 </div><!-- /#main-app -->
@@ -799,7 +596,6 @@ section.active { display: block; }
 // ════════════════════════════════════════════════════════════════════
 //  PASTE YOUR FIREBASE CONFIG HERE
 //  Replace every YOUR_... value with the real values from Firebase console
-//  (Project Settings → Your Apps → SDK setup and configuration)
 // ════════════════════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyD9UhuWFCo7faEaovUY4gLUuIp7NxE8T3I",
@@ -812,26 +608,37 @@ const FIREBASE_CONFIG = {
 // ════════════════════════════════════════════════════════════════════
 
 // ── Constants ──────────────────────────────────────────────────────
-const MONTHS = ['January','February','March','April','May','June',
-                'July','August','September','October','November','December'];
-const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun',
-                      'Jul','Aug','Sep','Oct','Nov','Dec'];
-const COLLECTION = 'calendars';
-const LS_KEY_ID  = 'coparcal_calendarId';
-const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // avoids 0/O 1/I/l
+const MONTHS       = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const COLLECTION   = 'calendars';
+const CODES_COL    = 'coparcal_codes';   // top-level code-lookup collection
+const LS_KEY_ID    = 'coparcal_calendarId';
+const CODE_CHARS   = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-// ── App state ──────────────────────────────────────────────────────
-let state = {
-  names: { p1: 'Parent 1', p2: 'Parent 2' },
-  assignments: {},
-  events: {},
-  colors: { p1: '#4A90D9', p2: '#E8734A' },
+// Thread definitions — roles list controls who can see each thread
+const THREAD_DEFS = {
+  'family':      { icon: '👨‍👧‍👦', label: 'Family',      roles: ['p1','p2','child'], desc: 'Visible to everyone' },
+  'parent-chat': { icon: '🔒',     label: 'Parent Chat',  roles: ['p1','p2'],          desc: 'Private — parents only' },
+  'child-p1':    { icon: '💬',     label: '',             roles: ['p1','child'],        desc: 'Private — parent & child' },
+  'child-p2':    { icon: '💬',     label: '',             roles: ['p2','child'],        desc: 'Private — parent & child' },
 };
-let calendarId      = null;
-let db              = null;
-let unsubscribe     = null;
-let suppressWrite   = false;
-let writeTimer      = null;
+
+// ── State ──────────────────────────────────────────────────────────
+let state = {
+  names:       { p1: 'Parent 1', p2: 'Parent 2', child: 'Child' },
+  assignments: {},
+  events:      {},
+  colors:      { p1: '#4A90D9', p2: '#E8734A' },
+  codes:       { p1: '', p2: '', child: '' },
+};
+
+// ── Runtime variables ──────────────────────────────────────────────
+let calendarId    = null;
+let role          = null;   // 'p1' | 'p2' | 'child'
+let db            = null;
+let unsubscribe   = null;
+let suppressWrite = false;
+let writeTimer    = null;
 
 let currentYear, currentMonth;
 let selectedDate     = null;
@@ -839,39 +646,41 @@ let modalAssignment  = null;
 let selectedSchedule = null;
 let eventsFilter     = 'all';
 
+// Messaging
+let currentThread   = 'family';
+let threadListeners = {};   // threadId → unsubscribe fn
+let threadMessages  = {};   // threadId → [{id, sender, text, timestamp}]
+
 // ── Firebase init ──────────────────────────────────────────────────
 function isConfigured() {
-  return !Object.values(FIREBASE_CONFIG).some(v => v.startsWith('YOUR_'));
+  return !Object.values(FIREBASE_CONFIG).some(v => String(v).startsWith('YOUR_'));
 }
 
 function initFirebase() {
-  if (!isConfigured()) {
-    document.getElementById('config-error').style.display = 'flex';
-    return false;
-  }
+  if (!isConfigured()) { document.getElementById('config-error').style.display = 'flex'; return false; }
   try {
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    db.settings({ experimentalForceLongPolling: false });
     return true;
   } catch(e) {
-    showScreen('config-error');
+    document.getElementById('config-error').style.display = 'flex';
     return false;
   }
 }
 
-// ── Screens ────────────────────────────────────────────────────────
+// ── Screen routing ─────────────────────────────────────────────────
 function showScreen(id) {
   ['config-error','loading-screen','setup-screen'].forEach(s => {
-    document.getElementById(s).style.display = s === id ? 'flex' : 'none';
+    document.getElementById(s).style.display = (s === id) ? 'flex' : 'none';
   });
-  document.getElementById('main-app').style.display = id === 'app' ? 'block' : 'none';
+  document.getElementById('main-app').style.display = (id === 'app') ? 'block' : 'none';
 }
 
-// ── Startup ────────────────────────────────────────────────────────
+function setLoadingMsg(msg) { document.getElementById('loading-msg').textContent = msg; }
+
+// ── Entry point ────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   if (!initFirebase()) return;
-
   const savedId = localStorage.getItem(LS_KEY_ID);
   if (savedId) {
     connectToCalendar(savedId);
@@ -880,99 +689,153 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ── Setup flows ────────────────────────────────────────────────────
-function generateCode() {
-  let code = '';
-  for (let i = 0; i < 6; i++) code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
-  return code;
+// ── Code generation ────────────────────────────────────────────────
+function generateCode(len = 6) {
+  let c = '';
+  for (let i = 0; i < len; i++) c += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  return c;
 }
 
-async function showCreateFlow() {
-  const code = generateCode();
+// ── Create new calendar ────────────────────────────────────────────
+async function createCalendar() {
   setLoadingMsg('Creating your calendar…');
   showScreen('loading-screen');
   try {
-    await db.collection(COLLECTION).doc(code).set(state);
-    localStorage.setItem(LS_KEY_ID, code);
-    await connectToCalendar(code);
+    const masterId  = generateCode(10);
+    const p1Code    = generateCode(6);
+    const p2Code    = generateCode(6);
+    const childCode = generateCode(6);
+
+    const initialState = { ...state, codes: { p1: p1Code, p2: p2Code, child: childCode } };
+
+    const batch = db.batch();
+    batch.set(db.collection(COLLECTION).doc(masterId), initialState);
+    batch.set(db.collection(CODES_COL).doc(p1Code),    { calendarId: masterId, role: 'p1' });
+    batch.set(db.collection(CODES_COL).doc(p2Code),    { calendarId: masterId, role: 'p2' });
+    batch.set(db.collection(CODES_COL).doc(childCode), { calendarId: masterId, role: 'child' });
+    await batch.commit();
+
+    localStorage.setItem(LS_KEY_ID, masterId);
+    localStorage.setItem('coparcal_role_' + masterId, 'p1');
+    await connectToCalendar(masterId);
   } catch(e) {
-    alert('Could not create calendar. Check your Firebase config and try again.\n\n' + e.message);
+    alert('Could not create calendar. Check your Firebase config.\n\n' + e.message);
     showScreen('setup-screen');
   }
 }
 
-async function joinCalendar() {
-  const raw = document.getElementById('join-code-input').value.trim().toUpperCase();
-  if (raw.length !== 6) { showToast('Enter all 6 characters of the join code.'); return; }
+// ── Join with code ─────────────────────────────────────────────────
+async function joinWithCode(rawCode) {
+  const code = (rawCode || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length !== 6) { showToast('Enter all 6 characters of the join code.'); return; }
 
-  setLoadingMsg('Looking up calendar "' + raw + '"…');
+  setLoadingMsg('Looking up calendar…');
   showScreen('loading-screen');
   try {
-    const doc = await db.collection(COLLECTION).doc(raw).get();
-    if (!doc.exists) {
-      showToast('Calendar not found. Double-check the code.');
+    const snap = await db.collection(CODES_COL).doc(code).get();
+    if (!snap.exists) {
+      showToast('Code not found. Double-check it and try again.');
       showScreen('setup-screen');
       return;
     }
-    localStorage.setItem(LS_KEY_ID, raw);
-    await connectToCalendar(raw);
+    const { calendarId: cid, role: r } = snap.data();
+    localStorage.setItem(LS_KEY_ID, cid);
+    localStorage.setItem('coparcal_role_' + cid, r);
+    await connectToCalendar(cid);
   } catch(e) {
     alert('Could not connect. Check your internet connection.\n\n' + e.message);
     showScreen('setup-screen');
   }
 }
 
-// ── Firebase connection ────────────────────────────────────────────
+// ── Connect to calendar ────────────────────────────────────────────
 async function connectToCalendar(id) {
   calendarId = id;
-  setLoadingMsg('Loading calendar…');
+
+  // Determine role
+  role = localStorage.getItem('coparcal_role_' + calendarId);
+  if (!role) {
+    // Migrate from old single-code format: check legacy whoAmI key
+    const legacy = localStorage.getItem('coparcal_who_' + calendarId);
+    role = (legacy === 'p1' || legacy === 'p2') ? legacy : 'p1';
+    localStorage.setItem('coparcal_role_' + calendarId, role);
+  }
+
+  setLoadingMsg('Loading your calendar…');
   showScreen('loading-screen');
 
-  // One-time fetch to populate state before showing UI
+  // Load from Firestore
   try {
     const snap = await db.collection(COLLECTION).doc(calendarId).get();
-    if (snap.exists) applyRemoteData(snap.data());
-  } catch(e) { /* offline — will sync via listener */ }
+    if (snap.exists) {
+      const data = snap.data();
+      // Migrate old calendar that has no codes
+      if (!data.codes || !data.codes.p1) {
+        await migrateOldCalendar();
+      } else {
+        applyRemoteData(data);
+      }
+    }
+  } catch(e) {
+    // Offline — restore from local cache
+    const cached = localStorage.getItem('coparcal_state_' + calendarId);
+    if (cached) try { state = JSON.parse(cached); } catch(e2) {}
+  }
 
   initUI();
   showScreen('app');
   listenToFirestore();
+  initThreads();
 }
 
+// ── Migrate old single-code calendars ─────────────────────────────
+async function migrateOldCalendar() {
+  const p1Code = generateCode(), p2Code = generateCode(), childCode = generateCode();
+  const codes  = { p1: p1Code, p2: p2Code, child: childCode };
+  const batch  = db.batch();
+  batch.update(db.collection(COLLECTION).doc(calendarId), { codes });
+  batch.set(db.collection(CODES_COL).doc(p1Code),    { calendarId, role: 'p1' });
+  batch.set(db.collection(CODES_COL).doc(p2Code),    { calendarId, role: 'p2' });
+  batch.set(db.collection(CODES_COL).doc(childCode), { calendarId, role: 'child' });
+  await batch.commit();
+  state.codes = codes;
+  if (!role) { role = 'p1'; localStorage.setItem('coparcal_role_' + calendarId, 'p1'); }
+  showToast('Calendar upgraded! New join codes are in Settings.');
+}
+
+// ── Firestore listener (calendar doc) ─────────────────────────────
 function listenToFirestore() {
   if (unsubscribe) unsubscribe();
-  unsubscribe = db.collection(COLLECTION).doc(calendarId)
-    .onSnapshot(snap => {
-      if (!snap.exists) return;
-      // Skip snapshots triggered by our own pending writes
-      if (snap.metadata.hasPendingWrites) return;
-      applyRemoteData(snap.data());
-      setSyncStatus('synced');
-    }, err => {
-      console.error('Firestore listener error:', err);
-      setSyncStatus('error');
-    });
+  unsubscribe = db.collection(COLLECTION).doc(calendarId).onSnapshot(snap => {
+    if (!snap.exists || snap.metadata.hasPendingWrites) return;
+    applyRemoteData(snap.data());
+    setSyncStatus('synced');
+  }, err => {
+    console.error('Firestore error:', err);
+    setSyncStatus('error');
+  });
 }
 
 function applyRemoteData(data) {
   suppressWrite = true;
   state = {
-    names:       { p1: 'Parent 1', p2: 'Parent 2', ...(data.names  || {}) },
+    names:       { p1:'Parent 1', p2:'Parent 2', child:'Child', ...(data.names || {}) },
     assignments: data.assignments || {},
     events:      data.events      || {},
-    colors:      { p1: '#4A90D9', p2: '#E8734A', ...(data.colors || {}) },
+    colors:      { p1:'#4A90D9', p2:'#E8734A',   ...(data.colors || {}) },
+    codes:       data.codes       || state.codes || { p1:'', p2:'', child:'' },
   };
   saveLocal();
-  // Refresh all UI that's currently visible
   applyColors();
   updateLegend();
   renderCalendar();
   renderEventsList();
   syncSettingsFields();
+  renderThreadTabs();   // thread labels use state.names
   suppressWrite = false;
 }
 
-// ── Firestore write (debounced) ────────────────────────────────────
+// ── Debounced Firestore write ──────────────────────────────────────
 function scheduleWrite() {
   if (suppressWrite) return;
   setSyncStatus('syncing');
@@ -987,59 +850,88 @@ async function writeToFirestore() {
     setSyncStatus('synced');
   } catch(e) {
     setSyncStatus('error');
-    console.error('Write failed:', e);
     showToast('Sync failed — check your connection.');
   }
 }
 
-// ── Sync status indicator ──────────────────────────────────────────
-function setSyncStatus(status) {
+function setSyncStatus(s) {
   const dot   = document.getElementById('sync-dot');
   const label = document.getElementById('sync-label');
-  dot.className = 'sync-dot' + (status !== 'synced' ? ' ' + status : '');
-  label.textContent = status === 'synced' ? 'Synced'
-                    : status === 'syncing' ? 'Syncing…'
-                    : 'Offline';
+  if (!dot) return;
+  dot.className   = 'sync-dot' + (s !== 'synced' ? ' ' + s : '');
+  label.textContent = s === 'syncing' ? 'Syncing…' : s === 'error' ? 'Offline' : 'Synced';
 }
 
-// ── Local persistence (backup) ─────────────────────────────────────
-function saveLocal() {
-  localStorage.setItem('coparcal_state_' + calendarId, JSON.stringify(state));
-}
+// ── Persistence ────────────────────────────────────────────────────
+function saveLocal() { localStorage.setItem('coparcal_state_' + calendarId, JSON.stringify(state)); }
+function save()      { saveLocal(); scheduleWrite(); }
 
-function save() {
-  saveLocal();
-  scheduleWrite();
-}
-
-// ── UI Init ────────────────────────────────────────────────────────
+// ── UI init ───────────────────────────────────────────────────────
 function initUI() {
   const now = new Date();
   currentYear  = now.getFullYear();
   currentMonth = now.getMonth();
 
-  // Try restoring from local cache (for offline / fast load)
+  // Restore local cache if state is empty
   const cached = localStorage.getItem('coparcal_state_' + calendarId);
-  if (cached) {
-    try { state = JSON.parse(cached); } catch(e) {}
-  }
+  if (cached && !state.codes.p1) try { state = JSON.parse(cached); } catch(e) {}
 
   applyColors();
   syncSettingsFields();
+  applyRoleRestrictions();
   document.getElementById('sched-start-date').value = now.toISOString().slice(0,10);
-  document.getElementById('settings-join-code').textContent = calendarId;
-  document.getElementById('header-sub').textContent = 'Code: ' + calendarId;
   renderCalendar();
   renderEventsList();
   updateLegend();
-  initMessages();
+  updateCodesDisplay();
 }
 
 function syncSettingsFields() {
-  document.getElementById('name-p1').value  = state.names.p1;
-  document.getElementById('name-p2').value  = state.names.p2;
-  document.getElementById('color-p1').value = state.colors.p1;
-  document.getElementById('color-p2').value = state.colors.p2;
+  document.getElementById('name-p1').value    = state.names.p1;
+  document.getElementById('name-p2').value    = state.names.p2;
+  document.getElementById('name-child').value = state.names.child || '';
+  document.getElementById('color-p1').value   = state.colors.p1;
+  document.getElementById('color-p2').value   = state.colors.p2;
+}
+
+function applyRoleRestrictions() {
+  const isChild = role === 'child';
+
+  // Header role pill
+  const pill = document.getElementById('role-pill');
+  if (isChild) {
+    pill.textContent = (state.names.child || 'Child') + ' — View Only';
+    pill.classList.add('child-role');
+  } else {
+    pill.textContent = role === 'p1' ? (state.names.p1 || 'Parent 1') : (state.names.p2 || 'Parent 2');
+    pill.classList.remove('child-role');
+  }
+
+  // Header sub
+  document.getElementById('header-sub').textContent = isChild ? 'View-only access' : 'Shared calendar';
+
+  // Hide Settings nav for child
+  document.getElementById('nav-settings').style.display = isChild ? 'none' : '';
+
+  // Read-only banners
+  document.getElementById('cal-readonly-banner').style.display  = isChild ? '' : 'none';
+  document.getElementById('sched-readonly-banner').style.display = isChild ? '' : 'none';
+
+  // Hide schedule apply/clear for child
+  document.getElementById('schedule-options').style.display = isChild ? 'none' : '';
+  document.getElementById('clear-card').style.display       = isChild ? 'none' : '';
+
+  // Schedule template buttons — disable for child
+  document.querySelectorAll('.sched-btn').forEach(btn => {
+    btn.disabled     = isChild;
+    btn.style.opacity = isChild ? '0.55' : '';
+    btn.style.cursor  = isChild ? 'default' : '';
+  });
+
+  // Name inputs read-only for child
+  ['name-p1','name-p2','name-child'].forEach(id => {
+    document.getElementById(id).readOnly = isChild;
+  });
 }
 
 // ── Tabs ───────────────────────────────────────────────────────────
@@ -1048,13 +940,14 @@ function showTab(id) {
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + id).classList.add('active');
   const map = { calendar:0, schedule:1, events:2, messages:3, settings:4 };
-  document.querySelectorAll('nav button')[map[id]].classList.add('active');
+  const btn = document.querySelectorAll('nav button')[map[id]];
+  if (btn) btn.classList.add('active');
   if (id === 'events')   renderEventsList();
   if (id === 'calendar') renderCalendar();
   if (id === 'messages') openMessagesTab();
 }
 
-// ── Calendar render ────────────────────────────────────────────────
+// ── Calendar ───────────────────────────────────────────────────────
 function changeMonth(dir) {
   currentMonth += dir;
   if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
@@ -1069,16 +962,14 @@ function renderCalendar() {
 
   const container = document.getElementById('cal-days');
   container.innerHTML = '';
-
-  const firstDay     = new Date(currentYear, currentMonth, 1).getDay();
-  const daysInMonth  = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const today        = new Date();
-  const todayKey     = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
+  const firstDay    = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const today       = new Date();
+  const todayKey    = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
+  const isReadOnly  = role === 'child';
 
   for (let i = 0; i < firstDay; i++) {
-    const el = document.createElement('div');
-    el.className = 'cal-day empty';
-    container.appendChild(el);
+    const el = document.createElement('div'); el.className = 'cal-day empty'; container.appendChild(el);
   }
 
   for (let d = 1; d <= daysInMonth; d++) {
@@ -1087,31 +978,24 @@ function renderCalendar() {
     const events     = state.events[key] || [];
 
     const el = document.createElement('div');
-    el.className = 'cal-day' + (assignment !== 'none' ? ' ' + assignment : '');
+    el.className = 'cal-day' + (assignment !== 'none' ? ' ' + assignment : '') + (isReadOnly ? ' readonly-mode' : '');
     if (key === todayKey) el.classList.add('today');
-    el.onclick = () => openDayModal(currentYear, currentMonth, d);
+    if (!isReadOnly) el.onclick = () => openDayModal(currentYear, currentMonth, d);
+    else el.onclick = () => showToast('Calendar is view-only for ' + (state.names.child || 'Child') + '.');
 
     const numEl = document.createElement('div');
-    numEl.className = 'day-num';
-    numEl.textContent = d;
-    el.appendChild(numEl);
+    numEl.className = 'day-num'; numEl.textContent = d; el.appendChild(numEl);
 
     if (assignment !== 'none') {
       const lbl2 = document.createElement('div');
       lbl2.className = 'day-label';
-      lbl2.textContent = assignment === 'shared' ? 'Shared'
-                       : assignment === 'p1' ? state.names.p1 : state.names.p2;
+      lbl2.textContent = assignment === 'shared' ? 'Shared' : assignment === 'p1' ? state.names.p1 : state.names.p2;
       el.appendChild(lbl2);
     }
 
     if (events.length > 0) {
-      const dots = document.createElement('div');
-      dots.className = 'event-dots';
-      events.slice(0, 4).forEach(() => {
-        const dot = document.createElement('div');
-        dot.className = 'event-dot';
-        dots.appendChild(dot);
-      });
+      const dots = document.createElement('div'); dots.className = 'event-dots';
+      events.slice(0,4).forEach(() => { const dot = document.createElement('div'); dot.className = 'event-dot'; dots.appendChild(dot); });
       el.appendChild(dots);
     }
     container.appendChild(el);
@@ -1124,13 +1008,10 @@ function dateKey(y, m, d) {
 
 // ── Day modal ──────────────────────────────────────────────────────
 function openDayModal(y, m, d) {
-  selectedDate     = dateKey(y, m, d);
-  modalAssignment  = state.assignments[selectedDate] || 'none';
-
-  const dateObj = new Date(y, m, d);
+  selectedDate    = dateKey(y, m, d);
+  modalAssignment = state.assignments[selectedDate] || 'none';
   document.getElementById('modal-date-title').textContent =
-    dateObj.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
-
+    new Date(y, m, d).toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
   document.getElementById('btn-p1').textContent = state.names.p1;
   document.getElementById('btn-p2').textContent = state.names.p2;
   updateParentBtns();
@@ -1139,17 +1020,9 @@ function openDayModal(y, m, d) {
   document.getElementById('day-overlay').classList.add('open');
 }
 
-function closeDayModal() {
-  document.getElementById('day-overlay').classList.remove('open');
-  selectedDate = null;
-}
-
-function closeModal(e) {
-  if (e.target === document.getElementById('day-overlay')) closeDayModal();
-}
-
-function setParent(p) { modalAssignment = p; updateParentBtns(); }
-
+function closeDayModal() { document.getElementById('day-overlay').classList.remove('open'); selectedDate = null; }
+function closeModal(e)   { if (e.target === document.getElementById('day-overlay')) closeDayModal(); }
+function setParent(p)    { modalAssignment = p; updateParentBtns(); }
 function updateParentBtns() {
   ['p1','p2','shared','none'].forEach(p =>
     document.getElementById('btn-' + p).classList.toggle('active', modalAssignment === p));
@@ -1165,9 +1038,7 @@ function renderModalEvents() {
   }
   events.forEach((ev, i) => {
     const li = document.createElement('li');
-    li.innerHTML = `<span class="event-icon">${ev.icon}</span>
-      <span class="event-text">${escHtml(ev.text)}</span>
-      <button class="del-btn" onclick="deleteEvent(${i})">✕</button>`;
+    li.innerHTML = `<span class="event-icon">${ev.icon}</span><span class="event-text">${escHtml(ev.text)}</span><button class="del-btn" onclick="deleteEvent(${i})">✕</button>`;
     list.appendChild(li);
   });
 }
@@ -1189,19 +1060,15 @@ function deleteEvent(idx) {
 }
 
 function saveDayModal() {
-  if (modalAssignment === 'none') {
-    delete state.assignments[selectedDate];
-  } else {
-    state.assignments[selectedDate] = modalAssignment;
-  }
-  save();
-  closeDayModal();
-  renderCalendar();
+  if (modalAssignment === 'none') { delete state.assignments[selectedDate]; }
+  else { state.assignments[selectedDate] = modalAssignment; }
+  save(); closeDayModal(); renderCalendar();
   showToast('Saved and syncing…');
 }
 
 // ── Schedule templates ─────────────────────────────────────────────
 function selectSchedule(id) {
+  if (role === 'child') return;
   selectedSchedule = id;
   document.querySelectorAll('.sched-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('sched-' + id).classList.add('selected');
@@ -1211,45 +1078,33 @@ function selectSchedule(id) {
 }
 
 function applySchedule() {
+  if (role === 'child') return;
   if (!selectedSchedule || selectedSchedule === 'custom') return;
   const startStr = document.getElementById('sched-start-date').value;
   if (!startStr) { showToast('Please pick a start date.'); return; }
-
   const startDate   = new Date(startStr + 'T00:00:00');
   const firstParent = document.getElementById('sched-first-parent').value;
   const months      = parseInt(document.getElementById('sched-months').value);
-  const endDate     = new Date(startDate);
-  endDate.setMonth(endDate.getMonth() + months);
-
+  const endDate     = new Date(startDate); endDate.setMonth(endDate.getMonth() + months);
   let cur = new Date(startDate), dayIdx = 0;
   while (cur <= endDate) {
     const key = dateKey(cur.getFullYear(), cur.getMonth(), cur.getDate());
     const dow = cur.getDay();
     let assignment;
-
     if (selectedSchedule === 'alt-week' || selectedSchedule === 'week-on-off') {
       assignment = (Math.floor(dayIdx / 7) % 2 === 0) ? firstParent : otherParent(firstParent);
     } else if (selectedSchedule === '223') {
       const cp = dayIdx % 14;
-      if      (cp < 2)  assignment = firstParent;
-      else if (cp < 4)  assignment = otherParent(firstParent);
-      else if (cp < 7)  assignment = firstParent;
-      else if (cp < 9)  assignment = otherParent(firstParent);
-      else if (cp < 11) assignment = firstParent;
-      else              assignment = otherParent(firstParent);
+      assignment = cp < 2 ? firstParent : cp < 4 ? otherParent(firstParent) : cp < 7 ? firstParent : cp < 9 ? otherParent(firstParent) : cp < 11 ? firstParent : otherParent(firstParent);
     } else if (selectedSchedule === '5-2') {
       assignment = (dow === 0 || dow === 6) ? otherParent(firstParent) : firstParent;
     } else if (selectedSchedule === '3-4') {
       assignment = (dayIdx % 7 < 3) ? firstParent : otherParent(firstParent);
     }
-
     if (assignment) state.assignments[key] = assignment;
-    cur.setDate(cur.getDate() + 1);
-    dayIdx++;
+    cur.setDate(cur.getDate() + 1); dayIdx++;
   }
-
-  save();
-  renderCalendar();
+  save(); renderCalendar();
   showToast('Schedule applied for ' + months + ' months — syncing…');
   showTab('calendar');
 }
@@ -1257,84 +1112,61 @@ function applySchedule() {
 function otherParent(p) { return p === 'p1' ? 'p2' : 'p1'; }
 
 function clearAssignments() {
-  if (!confirm('Clear all parent assignments? Events will be kept. This will sync to the other parent too.')) return;
-  state.assignments = {};
-  save();
-  renderCalendar();
-  showToast('Cleared — syncing…');
+  if (role === 'child') return;
+  if (!confirm('Clear all parent assignments? Events will be kept. This syncs to everyone.')) return;
+  state.assignments = {}; save(); renderCalendar(); showToast('Cleared — syncing…');
 }
 
 // ── Events list ────────────────────────────────────────────────────
 function filterEvents(f, btn) {
   eventsFilter = f;
   document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  renderEventsList();
+  btn.classList.add('active'); renderEventsList();
 }
 
 function renderEventsList() {
   const list = document.getElementById('events-list-full');
-  if (!list) return;
-  list.innerHTML = '';
-
+  if (!list) return; list.innerHTML = '';
   const all = [];
-  for (const [key, evs] of Object.entries(state.events)) {
-    evs.forEach(ev => all.push({ key, ev }));
-  }
+  for (const [key, evs] of Object.entries(state.events)) evs.forEach(ev => all.push({ key, ev }));
   all.sort((a, b) => a.key.localeCompare(b.key));
-
   const filtered = eventsFilter === 'all' ? all : all.filter(({ ev }) => ev.icon === eventsFilter);
-
   if (filtered.length === 0) {
-    list.innerHTML = `<div class="empty-state"><div class="es-icon">📋</div>
-      <p>No events yet.<br>Tap a day on the calendar to add one.</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="es-icon">📋</div><p>No events yet.<br>Tap a day on the calendar to add one.</p></div>`;
     return;
   }
-
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = new Date().toISOString().slice(0,10);
   filtered.forEach(({ key, ev }) => {
     const [y, m, d] = key.split('-').map(Number);
-    const isPast    = key < todayStr;
-    const a         = state.assignments[key];
+    const isPast = key < todayStr;
+    const a = state.assignments[key];
     const parentName = a === 'p1' ? state.names.p1 : a === 'p2' ? state.names.p2 : a === 'shared' ? 'Shared' : '—';
     const li = document.createElement('li');
     if (isPast) li.style.opacity = '0.55';
-    li.innerHTML = `
-      <div class="event-date-badge">
-        <div class="edb-month">${SHORT_MONTHS[m-1]}</div>
-        <div class="edb-day">${d}</div>
-      </div>
-      <div class="event-body">
-        <div class="ev-title">${escHtml(ev.text)}</div>
-        <div class="ev-meta">${parentName}${isPast ? ' · Past' : ''}</div>
-      </div>
-      <div class="ev-icon-large">${ev.icon}</div>`;
+    li.innerHTML = `<div class="event-date-badge"><div class="edb-month">${SHORT_MONTHS[m-1]}</div><div class="edb-day">${d}</div></div><div class="event-body"><div class="ev-title">${escHtml(ev.text)}</div><div class="ev-meta">${parentName}${isPast ? ' · Past' : ''}</div></div><div class="ev-icon-large">${ev.icon}</div>`;
     list.appendChild(li);
   });
 }
 
-// ── Settings ───────────────────────────────────────────────────────
+// ── Names & colors ─────────────────────────────────────────────────
 function saveNames() {
-  state.names.p1 = document.getElementById('name-p1').value.trim() || 'Parent 1';
-  state.names.p2 = document.getElementById('name-p2').value.trim() || 'Parent 2';
-  save();
-  updateLegend();
-  renderCalendar();
+  if (role === 'child') return;
+  state.names.p1    = document.getElementById('name-p1').value.trim()    || 'Parent 1';
+  state.names.p2    = document.getElementById('name-p2').value.trim()    || 'Parent 2';
+  state.names.child = document.getElementById('name-child').value.trim() || 'Child';
+  save(); updateLegend(); renderCalendar(); renderThreadTabs(); applyRoleRestrictions();
 }
 
 function updateLegend() {
-  const lp1 = document.getElementById('legend-p1');
-  const lp2 = document.getElementById('legend-p2');
-  if (lp1) lp1.textContent = state.names.p1;
-  if (lp2) lp2.textContent = state.names.p2;
+  const lp1 = document.getElementById('legend-p1'); if (lp1) lp1.textContent = state.names.p1;
+  const lp2 = document.getElementById('legend-p2'); if (lp2) lp2.textContent = state.names.p2;
 }
 
 function updateColors() {
+  if (role === 'child') return;
   state.colors.p1 = document.getElementById('color-p1').value;
   state.colors.p2 = document.getElementById('color-p2').value;
-  save();
-  applyColors();
-  renderCalendar();
+  save(); applyColors(); renderCalendar();
 }
 
 function applyColors() {
@@ -1345,9 +1177,7 @@ function applyColors() {
 }
 
 function hexToRgba(hex, a) {
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
   return `rgba(${r},${g},${b},${a})`;
 }
 
@@ -1355,28 +1185,37 @@ function resetColors() {
   state.colors = { p1: '#4A90D9', p2: '#E8734A' };
   document.getElementById('color-p1').value = '#4A90D9';
   document.getElementById('color-p2').value = '#E8734A';
-  save();
-  applyColors();
-  renderCalendar();
+  save(); applyColors(); renderCalendar();
 }
 
-function copyJoinCode() {
-  const code = calendarId || '——';
+// ── Codes display ──────────────────────────────────────────────────
+function updateCodesDisplay() {
+  const codes = state.codes || {};
+  document.getElementById('code-display-p1').textContent    = codes.p1    || '——';
+  document.getElementById('code-display-p2').textContent    = codes.p2    || '——';
+  document.getElementById('code-display-child').textContent = codes.child || '——';
+}
+
+function copyCode(which) {
+  const code = (state.codes || {})[which] || '';
+  if (!code) { showToast('Code not available.'); return; }
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(code).then(() => showToast('Join code copied!'));
+    navigator.clipboard.writeText(code).then(() => showToast(which === 'child' ? 'Child code copied!' : 'Parent ' + (which === 'p1' ? '1' : '2') + ' code copied!'));
   } else {
-    showToast('Your code: ' + code);
+    showToast('Code: ' + code);
   }
 }
 
+// ── Disconnect ─────────────────────────────────────────────────────
 function disconnectCalendar() {
-  if (!confirm('Forget this calendar on this device? You can rejoin later with the join code: ' + calendarId)) return;
+  if (!confirm('Forget this calendar on this device? You can rejoin with your code.')) return;
   if (unsubscribe) unsubscribe();
-  if (msgsUnsubscribe) msgsUnsubscribe();
+  Object.values(threadListeners).forEach(fn => fn && fn());
   localStorage.removeItem(LS_KEY_ID);
-  localStorage.removeItem('coparcal_state_' + calendarId);
-  localStorage.removeItem('coparcal_who_' + calendarId);
-  localStorage.removeItem('coparcal_lastread_' + calendarId);
+  localStorage.removeItem('coparcal_state_'  + calendarId);
+  localStorage.removeItem('coparcal_role_'   + calendarId);
+  localStorage.removeItem('coparcal_who_'    + calendarId);
+  getVisibleThreads().forEach(t => localStorage.removeItem('coparcal_lr_' + calendarId + '_' + t.id));
   location.reload();
 }
 
@@ -1385,10 +1224,7 @@ function exportData() {
   const json = JSON.stringify(state, null, 2);
   if (navigator.clipboard) {
     navigator.clipboard.writeText(json).then(() => showToast('Backup copied to clipboard!'));
-  } else {
-    document.getElementById('import-box').value = json;
-    showToast('Data shown below — copy manually.');
-  }
+  } else { document.getElementById('import-box').value = json; showToast('Copy data from the box below.'); }
 }
 
 function importData() {
@@ -1396,205 +1232,215 @@ function importData() {
   if (!raw) { showToast('Paste backup data first.'); return; }
   try {
     const parsed = JSON.parse(raw);
-    if (!parsed.assignments || !parsed.events) throw new Error('Invalid format');
+    if (!parsed.assignments || !parsed.events) throw new Error('Invalid');
     state = parsed;
-    save();
-    applyColors();
-    syncSettingsFields();
-    updateLegend();
-    renderCalendar();
-    renderEventsList();
+    save(); applyColors(); syncSettingsFields(); updateLegend(); renderCalendar(); renderEventsList(); updateCodesDisplay();
     showToast('Restored and syncing…');
-  } catch(e) {
-    showToast('Invalid backup data — check and try again.');
+  } catch(e) { showToast('Invalid backup data — check and try again.'); }
+}
+
+// ── Messages: thread helpers ───────────────────────────────────────
+function getVisibleThreads() {
+  return Object.entries(THREAD_DEFS)
+    .filter(([, def]) => def.roles.includes(role))
+    .map(([id, def]) => ({ id, ...def, label: getThreadLabel(id) }));
+}
+
+function getThreadLabel(threadId) {
+  const cn = state.names.child || 'Child';
+  const p1 = state.names.p1   || 'Parent 1';
+  const p2 = state.names.p2   || 'Parent 2';
+  switch(threadId) {
+    case 'family':      return 'Family';
+    case 'parent-chat': return 'Parent Chat';
+    case 'child-p1':    return role === 'child' ? p1 : cn;
+    case 'child-p2':    return role === 'child' ? p2 : cn;
+    default:            return threadId;
   }
 }
 
-// ── Messages ───────────────────────────────────────────────────────
-let whoAmI          = null;  // 'p1' or 'p2', stored only in localStorage
-let msgsUnsubscribe = null;  // Firestore messages listener cleanup
-let allMessages     = [];    // local cache of message docs
+function getThreadDesc(threadId) {
+  const def = THREAD_DEFS[threadId];
+  return def ? def.icon + ' ' + def.desc : '';
+}
 
-function initMessages() {
-  whoAmI = localStorage.getItem('coparcal_who_' + calendarId);
-  // Start listener immediately if identity is known, so the unread badge
-  // updates even while the user is on other tabs.
-  if (whoAmI) startMessagesListener();
+function getSenderName(sender) {
+  if (sender === 'p1')    return state.names.p1    || 'Parent 1';
+  if (sender === 'p2')    return state.names.p2    || 'Parent 2';
+  if (sender === 'child') return state.names.child || 'Child';
+  return 'Unknown';
+}
+
+// ── Messages: initialise ───────────────────────────────────────────
+function initThreads() {
+  // Default to family thread
+  currentThread = 'family';
+  renderThreadTabs();
+  // Start listeners for all visible threads so unread counts work in background
+  getVisibleThreads().forEach(t => startThreadListener(t.id));
 }
 
 function openMessagesTab() {
-  if (!whoAmI) {
-    showIdentityWrap();
-  } else {
-    showChatWrap();
-    clearUnread();
-    scrollChat();
-  }
-}
-
-function showIdentityWrap() {
-  document.getElementById('identity-wrap').style.display  = 'flex';
-  document.getElementById('chat-area-wrap').style.display = 'none';
-  // Show real names on the identity buttons
-  document.getElementById('id-btn-p1').textContent = '👤 I am ' + state.names.p1;
-  document.getElementById('id-btn-p2').textContent = '👤 I am ' + state.names.p2;
-}
-
-function showChatWrap() {
-  document.getElementById('identity-wrap').style.display  = 'none';
-  document.getElementById('chat-area-wrap').style.display = 'flex';
-  if (!msgsUnsubscribe) startMessagesListener();
+  renderThreadTabs();
   renderMessages();
-}
-
-function setIdentity(who) {
-  whoAmI = who;
-  localStorage.setItem('coparcal_who_' + calendarId, who);
-  showChatWrap();
-  clearUnread();
+  clearThreadUnread(currentThread);
   scrollChat();
-  // Show a friendly confirmation
-  const name = who === 'p1' ? state.names.p1 : state.names.p2;
-  showToast('Sending as ' + name);
 }
 
-function resetIdentity() {
-  whoAmI = null;
-  localStorage.removeItem('coparcal_who_' + calendarId);
-  showIdentityWrap();
+// ── Messages: thread tab bar ───────────────────────────────────────
+function renderThreadTabs() {
+  const bar = document.getElementById('thread-tabs');
+  if (!bar) return;
+  bar.innerHTML = '';
+  getVisibleThreads().forEach(t => {
+    const unread  = getThreadUnread(t.id);
+    const btn = document.createElement('button');
+    btn.className = 'thread-tab' + (t.id === currentThread ? ' active' : '');
+    btn.innerHTML = `${t.icon} ${escHtml(t.label)}${unread > 0 ? `<span class="thread-badge">${unread > 9 ? '9+' : unread}</span>` : ''}`;
+    btn.onclick = () => switchThread(t.id);
+    bar.appendChild(btn);
+  });
+  // Thread description
+  const desc = document.getElementById('thread-desc');
+  if (desc) desc.textContent = getThreadDesc(currentThread);
+  updateNavUnreadBadge();
 }
 
-function startMessagesListener() {
-  if (msgsUnsubscribe) return; // already listening
-  msgsUnsubscribe = db.collection(COLLECTION).doc(calendarId)
-    .collection('messages')
-    .orderBy('timestamp', 'asc')
-    .limitToLast(200)
-    .onSnapshot(snapshot => {
-      allMessages = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      const msgTab = document.getElementById('tab-messages');
-      if (msgTab && msgTab.classList.contains('active')) {
-        renderMessages();
-        clearUnread();
-        scrollChat();
-      } else {
-        updateUnreadBadge();
-      }
-    }, err => {
-      console.error('Messages listener error:', err);
-    });
+function switchThread(threadId) {
+  currentThread = threadId;
+  renderThreadTabs();
+  if (!threadListeners[threadId]) startThreadListener(threadId);
+  renderMessages();
+  clearThreadUnread(threadId);
+  scrollChat();
 }
 
+// ── Messages: Firestore listener per thread ────────────────────────
+function startThreadListener(threadId) {
+  if (threadListeners[threadId]) return; // already active
+  const ref = db.collection(COLLECTION).doc(calendarId)
+    .collection('threads').doc(threadId).collection('messages')
+    .orderBy('timestamp', 'asc').limitToLast(200);
+
+  threadListeners[threadId] = ref.onSnapshot(snapshot => {
+    threadMessages[threadId] = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    const msgTab = document.getElementById('tab-messages');
+    const isActive = msgTab && msgTab.classList.contains('active');
+    if (isActive && threadId === currentThread) {
+      renderMessages();
+      clearThreadUnread(threadId);
+      scrollChat();
+    } else {
+      renderThreadTabs(); // update badge counts
+    }
+  }, err => console.error('Thread listener error:', err));
+}
+
+// ── Messages: render ───────────────────────────────────────────────
 function renderMessages() {
   const container = document.getElementById('chat-messages');
   if (!container) return;
   container.innerHTML = '';
-
-  if (allMessages.length === 0) {
-    container.innerHTML = '<div class="chat-empty"><div class="ce-icon">💬</div><p>No messages yet.<br>Say hello!</p></div>';
+  const msgs = threadMessages[currentThread] || [];
+  if (msgs.length === 0) {
+    container.innerHTML = '<div class="chat-empty"><div class="ce-icon">💬</div><p>No messages yet.<br>Say something!</p></div>';
     return;
   }
-
   let prevSender = null;
-  allMessages.forEach(msg => {
-    const isMine = msg.sender === whoAmI;
-    const name   = msg.sender === 'p1' ? state.names.p1 : state.names.p2;
-    const ts     = msg.timestamp ? msg.timestamp.toMillis() : null;
-    const timeStr = ts ? new Date(ts).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '';
-    const dateStr = ts ? new Date(ts).toLocaleDateString([], { month:'short', day:'numeric' }) : '';
-    const newSender = msg.sender !== prevSender;
-    prevSender = msg.sender;
+  msgs.forEach(msg => {
+    const isMine    = msg.sender === role;
+    const name      = getSenderName(msg.sender);
+    const ts        = msg.timestamp ? msg.timestamp.toMillis() : null;
+    const timeStr   = ts ? new Date(ts).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '';
+    const dateStr   = ts ? new Date(ts).toLocaleDateString([], { month:'short', day:'numeric' }) : '';
+    const newGroup  = msg.sender !== prevSender;
+    prevSender      = msg.sender;
 
     const row = document.createElement('div');
-    row.className = 'msg-row ' + (isMine ? 'mine' : 'theirs') + (newSender ? ' new-sender' : '');
+    row.className = 'msg-row ' + (isMine ? 'mine' : 'theirs') + (newGroup ? ' new-group' : '');
 
-    // Show meta (name + time) only on first bubble of each sender run
-    if (newSender) {
+    if (newGroup) {
       const meta = document.createElement('div');
-      meta.className = 'msg-meta';
+      meta.className   = 'msg-meta';
       meta.textContent = isMine ? (dateStr + ' ' + timeStr) : (name + ' · ' + dateStr + ' ' + timeStr);
       row.appendChild(meta);
     }
 
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble ' + (isMine ? 'mine' : 'theirs');
-    bubble.textContent = msg.text; // textContent is XSS-safe
+    if (!isMine && msg.sender === 'child') bubble.classList.add('child-sender');
+    bubble.textContent = msg.text;
     row.appendChild(bubble);
-
     container.appendChild(row);
   });
 }
 
+// ── Messages: send ─────────────────────────────────────────────────
 async function sendMessage() {
   const input = document.getElementById('msg-input');
-  const text  = input.value.trim();
-  if (!text || !whoAmI || !calendarId) return;
-
-  input.value = '';
-  input.style.height = '';
-  input.focus();
-
+  const text  = (input.value || '').trim();
+  if (!text || !role || !calendarId) return;
+  input.value = ''; input.style.height = ''; input.focus();
   try {
-    await db.collection(COLLECTION).doc(calendarId).collection('messages').add({
-      sender:    whoAmI,
-      text:      text,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-    });
+    await db.collection(COLLECTION).doc(calendarId)
+      .collection('threads').doc(currentThread).collection('messages').add({
+        sender:    role,
+        text:      text,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      });
   } catch(e) {
     showToast('Failed to send — check your connection.');
-    input.value = text; // restore so the user doesn't lose their message
+    input.value = text;
   }
 }
 
+// ── Messages: unread tracking ──────────────────────────────────────
+function lrKey(threadId) { return 'coparcal_lr_' + calendarId + '_' + threadId; }
+
+function getThreadUnread(threadId) {
+  if (!role) return 0;
+  const lastRead = parseInt(localStorage.getItem(lrKey(threadId)) || '0');
+  return (threadMessages[threadId] || []).filter(m => {
+    if (m.sender === role) return false;
+    const ts = m.timestamp ? m.timestamp.toMillis() : 0;
+    return ts > lastRead;
+  }).length;
+}
+
+function clearThreadUnread(threadId) {
+  localStorage.setItem(lrKey(threadId), Date.now().toString());
+  renderThreadTabs();
+  updateNavUnreadBadge();
+}
+
+function updateNavUnreadBadge() {
+  const total = getVisibleThreads().reduce((sum, t) => sum + getThreadUnread(t.id), 0);
+  const badge = document.getElementById('unread-badge');
+  if (!badge) return;
+  if (total > 0) { badge.style.display = 'inline-flex'; badge.textContent = total > 9 ? '9+' : total; }
+  else badge.style.display = 'none';
+}
+
+// ── Scroll chat to bottom ──────────────────────────────────────────
 function scrollChat() {
   const c = document.getElementById('chat-messages');
   if (c) requestAnimationFrame(() => { c.scrollTop = c.scrollHeight; });
 }
 
-function clearUnread() {
-  localStorage.setItem('coparcal_lastread_' + calendarId, Date.now().toString());
-  const badge = document.getElementById('unread-badge');
-  if (badge) badge.style.display = 'none';
+// ── Helpers ────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function updateUnreadBadge() {
-  if (!whoAmI) return;
-  const lastRead = parseInt(localStorage.getItem('coparcal_lastread_' + calendarId) || '0');
-  const count = allMessages.filter(m => {
-    if (m.sender === whoAmI) return false; // own messages never count as unread
-    const ts = m.timestamp ? m.timestamp.toMillis() : 0;
-    return ts > lastRead;
-  }).length;
-
-  const badge = document.getElementById('unread-badge');
-  if (!badge) return;
-  if (count > 0) {
-    badge.style.display = 'inline-flex';
-    badge.textContent   = count > 9 ? '9+' : String(count);
-  } else {
-    badge.style.display = 'none';
-  }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
 }
 
 function autoResizeTextarea(el) {
   el.style.height = '';
   el.style.height = Math.min(el.scrollHeight, 100) + 'px';
-}
-
-// ── Helpers ────────────────────────────────────────────────────────
-function escHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-function setLoadingMsg(msg) {
-  document.getElementById('loading-msg').textContent = msg;
 }
 </script>
 </body>
