@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Co-Parenting Calendar</title>
+
+<!-- Firebase SDKs (loaded via CDN — no installation required) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<style>
+:root {
+  --p1: #4A90D9;
+  --p1-light: rgba(74,144,217,0.18);
+  --p2: #E8734A;
+  --p2-light: rgba(232,115,74,0.18);
+  --shared: #7B68EE;
+  --shared-light: rgba(123,104,238,0.18);
+  --bg: #f4f6fa;
+  --card: #ffffff;
+  --border: #e0e4ed;
+  --text: #2d3142;
+  --muted: #8a8fa8;
+  --radius: 12px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Setup & Error screens ── */
+#config-error, #setup-screen, #loading-screen {
+  position: fixed; inset: 0;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  color: #fff;
+}
+#config-error { display: none; }
+#setup-screen { display: none; }
+#loading-screen { display: none; }
+.screen-emoji { font-size: 3rem; margin-bottom: 16px; }
+.screen-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 8px; }
+.screen-sub   { font-size: 0.88rem; opacity: 0.75; line-height: 1.5; max-width: 340px; }
+.setup-cards  { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 380px; margin-top: 28px; }
+.setup-card {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  text-align: left;
+}
+.setup-card:hover { background: rgba(255,255,255,0.18); transform: translateY(-1px); }
+.setup-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+.setup-card p  { font-size: 0.78rem; opacity: 0.75; }
+.setup-card .card-icon { font-size: 1.6rem; margin-bottom: 8px; }
+.join-input-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.join-input-row input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.join-input-row input::placeholder { color: rgba(255,255,255,0.4); letter-spacing: 1px; font-weight: 400; }
+.join-input-row input:focus { outline: 2px solid #fff; }
+.setup-btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: none;
+  background: #fff;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.setup-btn:hover { opacity: 0.85; }
+.setup-btn.danger { background: #e74c3c; color: #fff; }
+.error-box {
+  background: rgba(231,76,60,0.25);
+  border: 1px solid rgba(231,76,60,0.5);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-top: 20px;
+  font-size: 0.82rem;
+  max-width: 380px;
+  line-height: 1.55;
+  text-align: left;
+}
+.error-box code {
+  background: rgba(0,0,0,0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.78rem;
+}
+.spinner {
+  width: 42px; height: 42px;
+  border: 4px solid rgba(255,255,255,0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Header ── */
+#main-app { display: none; }
+header {
+  background: linear-gradient(135deg, var(--p1) 0%, #2c6fad 100%);
+  color: #fff;
+  padding: 14px 20px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.header-left h1  { font-size: 1.1rem; font-weight: 800; }
+.header-left p   { font-size: 0.72rem; opacity: 0.8; margin-top: 1px; }
+.sync-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 20px;
+  padding: 5px 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sync-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #2ecc71;
+  transition: background 0.3s;
+}
+.sync-dot.syncing { background: #f39c12; animation: pulse 1s infinite; }
+.sync-dot.error   { background: #e74c3c; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── Nav ── */
+nav {
+  display: flex;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+nav button {
+  flex: 1; min-width: 72px;
+  padding: 10px 4px;
+  border: none; background: none;
+  color: var(--muted);
+  font-size: 0.7rem; font-weight: 600;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+nav button.active { color: var(--p1); border-bottom-color: var(--p1); }
+nav button:hover:not(.active) { color: var(--text); background: var(--bg); }
+
+/* ── Sections ── */
+section { display: none; padding: 16px; max-width: 700px; margin: 0 auto; }
+section.active { display: block; }
+
+/* ── Calendar controls ── */
+.cal-controls {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--card); border-radius: var(--radius);
+  padding: 12px 16px; margin-bottom: 12px; box-shadow: var(--shadow);
+}
+.cal-controls h2 { font-size: 1.05rem; font-weight: 700; }
+.icon-btn {
+  width: 34px; height: 34px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg);
+  cursor: pointer; font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.icon-btn:hover { background: var(--border); }
+
+/* ── Legend ── */
+.legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; }
+.legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Calendar grid ── */
+.cal-grid { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.day-headers { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--bg); border-bottom: 1px solid var(--border); }
+.day-headers span {
+  text-align: center; font-size: 0.7rem; font-weight: 700;
+  color: var(--muted); padding: 8px 2px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.cal-days { display: grid; grid-template-columns: repeat(7, 1fr); }
+.cal-day {
+  min-height: 64px; padding: 4px;
+  border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  cursor: pointer; position: relative; transition: filter 0.1s;
+}
+.cal-day:nth-child(7n) { border-right: none; }
+.cal-day:hover { filter: brightness(0.95); }
+.cal-day.empty { background: var(--bg); cursor: default; opacity: 0.4; }
+.cal-day.empty:hover { filter: none; }
+.cal-day.p1     { background: var(--p1-light); }
+.cal-day.p2     { background: var(--p2-light); }
+.cal-day.shared { background: var(--shared-light); }
+.cal-day.today .day-num {
+  background: var(--p1); color: #fff; border-radius: 50%;
+  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+}
+.day-num { font-size: 0.78rem; font-weight: 700; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
+.day-label { font-size: 0.58rem; font-weight: 600; color: var(--muted); line-height: 1.1; margin-bottom: 2px; }
+.event-dots { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 2px; }
+.event-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text); opacity: 0.6; }
+
+/* ── Modal ── */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: flex-end; justify-content: center; }
+.overlay.open { display: flex; }
+@media (min-width: 500px) { .overlay { align-items: center; } }
+.modal {
+  background: var(--card); border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 480px;
+  padding: 24px 20px 32px; max-height: 90vh; overflow-y: auto;
+  animation: slideUp 0.25s ease;
+}
+@media (min-width: 500px) { .modal { border-radius: 20px; } }
+@keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.modal-header h3 { font-size: 1rem; font-weight: 700; }
+.close-btn { width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--bg); cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
+
+/* ── Parent picker ── */
+.parent-picker { display: flex; gap: 8px; margin-bottom: 16px; }
+.parent-btn { flex: 1; padding: 10px 6px; border-radius: 10px; border: 2px solid var(--border); background: var(--bg); cursor: pointer; font-size: 0.75rem; font-weight: 700; transition: all 0.15s; }
+.parent-btn.p1.active     { background: var(--p1); border-color: var(--p1); color: #fff; }
+.parent-btn.p2.active     { background: var(--p2); border-color: var(--p2); color: #fff; }
+.parent-btn.shared.active { background: var(--shared); border-color: var(--shared); color: #fff; }
+.parent-btn.none.active   { background: var(--text); border-color: var(--text); color: #fff; }
+
+/* ── Event list (modal) ── */
+.event-list { list-style: none; margin-bottom: 12px; }
+.event-list li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--bg); border-radius: 8px; margin-bottom: 6px; font-size: 0.82rem; }
+.event-icon { font-size: 1rem; }
+.event-text { flex: 1; }
+.del-btn { background: none; border: none; cursor: pointer; font-size: 0.85rem; color: var(--muted); padding: 2px 4px; border-radius: 4px; }
+.del-btn:hover { color: #e74c3c; background: #fce; }
+.add-event-row { display: flex; gap: 8px; margin-bottom: 4px; }
+.add-event-row select { width: 44px; padding: 8px 4px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); font-size: 1rem; cursor: pointer; }
+.add-event-row input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.82rem; background: var(--bg); }
+.add-event-row input:focus, .add-event-row select:focus { outline: 2px solid var(--p1); border-color: var(--p1); }
+.add-event-row button { padding: 8px 14px; border-radius: 8px; border: none; background: var(--p1); color: #fff; font-weight: 700; cursor: pointer; font-size: 0.82rem; }
+.save-btn { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--p1); color: #fff; font-size: 0.9rem; font-weight: 700; cursor: pointer; margin-top: 14px; }
+.save-btn:hover { opacity: 0.9; }
+
+/* ── Cards ── */
+.card { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow); }
+.card h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; }
+.schedule-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sched-btn { padding: 12px 8px; border-radius: 10px; border: 2px solid var(--border); background: var(--bg); cursor: pointer; font-size: 0.78rem; font-weight: 600; text-align: center; transition: all 0.15s; line-height: 1.3; }
+.sched-btn .sched-icon { font-size: 1.2rem; display: block; margin-bottom: 4px; }
+.sched-btn:hover { border-color: var(--p1); color: var(--p1); }
+.sched-btn.selected { border-color: var(--p1); background: var(--p1-light); color: var(--p1); }
+
+.form-row { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.form-row label { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.form-row input[type="date"], .form-row select { padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.85rem; background: var(--bg); width: 100%; }
+.apply-btn { padding: 12px; border-radius: 10px; border: none; background: var(--p1); color: #fff; font-size: 0.88rem; font-weight: 700; cursor: pointer; margin-top: 8px; width: 100%; }
+.apply-btn:hover { opacity: 0.9; }
+
+.name-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.name-row > div { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.name-row label { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+.name-input { padding: 8px 10px; border-radius: 8px; border: 2px solid var(--border); font-size: 0.85rem; font-weight: 600; background: var(--bg); width: 100%; }
+.name-input.p1 { border-color: var(--p1); }
+.name-input.p2 { border-color: var(--p2); }
+
+/* ── Events tab ── */
+.events-filter { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; }
+.filter-chip { padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); font-size: 0.76rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+.filter-chip.active { background: var(--p1); border-color: var(--p1); color: #fff; }
+.events-list-full { list-style: none; }
+.events-list-full li { background: var(--card); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; }
+.event-date-badge { background: var(--bg); border-radius: 8px; padding: 6px 8px; text-align: center; min-width: 46px; flex-shrink: 0; }
+.event-date-badge .edb-month { font-size: 0.6rem; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+.event-date-badge .edb-day   { font-size: 1.1rem; font-weight: 800; line-height: 1; }
+.event-body { flex: 1; min-width: 0; }
+.event-body .ev-title { font-size: 0.85rem; font-weight: 600; }
+.event-body .ev-meta  { font-size: 0.73rem; color: var(--muted); margin-top: 1px; }
+.ev-icon-large { font-size: 1.3rem; }
+
+/* ── Join code display ── */
+.join-code-display {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;
+}
+.join-code-display .code-text { font-size: 1.4rem; font-weight: 800; letter-spacing: 4px; color: var(--p1); flex: 1; }
+.copy-code-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-size: 0.78rem; font-weight: 700; color: var(--text); white-space: nowrap; }
+.copy-code-btn:hover { background: var(--p1); color: #fff; border-color: var(--p1); }
+
+/* ── Empty state ── */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+.empty-state .es-icon { font-size: 2.5rem; margin-bottom: 10px; }
+.empty-state p { font-size: 0.85rem; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 20px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--text); color: #fff;
+  padding: 10px 20px; border-radius: 20px;
+  font-size: 0.82rem; font-weight: 600; z-index: 600;
+  transition: transform 0.3s; white-space: nowrap; box-shadow: var(--shadow);
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── Info box ── */
+.info-box { background: #e8f4fd; border-left: 4px solid var(--p1); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 0.8rem; color: var(--text); line-height: 1.55; margin-bottom: 12px; }
+.info-box strong { display: block; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ CONFIG ERROR SCREEN ══════════════ -->
+<div id="config-error">
+  <div class="screen-emoji">🔧</div>
+  <div class="screen-title">Firebase Not Configured</div>
+  <div class="screen-sub">Paste your Firebase config into this HTML file to enable cloud sync.</div>
+  <div class="error-box">
+    <strong>How to fix:</strong><br>
+    Open this HTML file in a text editor, find the section labelled<br>
+    <code>PASTE YOUR FIREBASE CONFIG HERE</code><br><br>
+    Replace all six <code>YOUR_...</code> placeholder values with the real values from your Firebase project console.<br><br>
+    See the Settings tab instructions inside the app for the full step-by-step guide.
+  </div>
+</div>
+
+<!-- ══════════════ LOADING SCREEN ══════════════ -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div class="screen-title" style="font-size:1.1rem">Connecting…</div>
+  <div class="screen-sub" id="loading-msg">Reaching your shared calendar</div>
+</div>
+
+<!-- ══════════════ SETUP SCREEN ══════════════ -->
+<div id="setup-screen">
+  <div class="screen-emoji">👨‍👧‍👦</div>
+  <div class="screen-title">Co-Parenting Calendar</div>
+  <div class="screen-sub">Set up your shared calendar so both parents stay in sync — in real time.</div>
+  <div class="setup-cards">
+
+    <div class="setup-card" onclick="showCreateFlow()">
+      <div class="card-icon">✨</div>
+      <h3>Create a New Calendar</h3>
+      <p>Start fresh. You'll get a 6-letter join code to share with the other parent.</p>
+    </div>
+
+    <div class="setup-card" id="join-card">
+      <div class="card-icon">🔗</div>
+      <h3>Join an Existing Calendar</h3>
+      <p>Enter the join code the other parent shared with you.</p>
+      <div class="join-input-row" onclick="event.stopPropagation()">
+        <input type="text" id="join-code-input" maxlength="6" placeholder="ABC123"
+               oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+               onkeydown="if(event.key==='Enter') joinCalendar()">
+        <button class="setup-btn" onclick="joinCalendar()">Join</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="main-app">
+
+<header>
+  <div class="header-left">
+    <h1>👨‍👧‍👦 Co-Parenting Calendar</h1>
+    <p id="header-sub">Shared calendar</p>
+  </div>
+  <div class="sync-pill">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span id="sync-label">Synced</span>
+  </div>
+</header>
+
+<nav>
+  <button class="active" onclick="showTab('calendar')">📅 Calendar</button>
+  <button onclick="showTab('schedule')">🔄 Schedule</button>
+  <button onclick="showTab('events')">📋 Events</button>
+  <button onclick="showTab('settings')">⚙️ Settings</button>
+</nav>
+
+<!-- ── CALENDAR TAB ── -->
+<section id="tab-calendar" class="active">
+  <div class="cal-controls">
+    <button class="icon-btn" onclick="changeMonth(-1)">‹</button>
+    <h2 id="month-label"></h2>
+    <button class="icon-btn" onclick="changeMonth(1)">›</button>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--p1)"></div><span id="legend-p1">Parent 1</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--p2)"></div><span id="legend-p2">Parent 2</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--shared)"></div><span>Shared</span></div>
+  </div>
+  <div class="cal-grid">
+    <div class="day-headers">
+      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+    </div>
+    <div class="cal-days" id="cal-days"></div>
+  </div>
+</section>
+
+<!-- ── SCHEDULE TAB ── -->
+<section id="tab-schedule">
+  <div class="card">
+    <h3>Parent Names</h3>
+    <div class="name-row">
+      <div>
+        <label>Parent 1</label>
+        <input class="name-input p1" id="name-p1" type="text" placeholder="e.g. Mom" maxlength="20" oninput="saveNames()">
+      </div>
+      <div>
+        <label>Parent 2</label>
+        <input class="name-input p2" id="name-p2" type="text" placeholder="e.g. Dad" maxlength="20" oninput="saveNames()">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Quick Schedule Templates</h3>
+    <div class="schedule-grid">
+      <button class="sched-btn" onclick="selectSchedule('alt-week')" id="sched-alt-week">
+        <span class="sched-icon">📆</span>Alternating Weeks<br><small>7 days each parent</small>
+      </button>
+      <button class="sched-btn" onclick="selectSchedule('223')" id="sched-223">
+        <span class="sched-icon">🔁</span>2-2-3 Rotation<br><small>2 days / 2 days / 3 days</small>
+      </button>
+      <button class="sched-btn" onclick="selectSchedule('week-on-off')" id="sched-week-on-off">
+        <span class="sched-icon">🗓️</span>Week On / Week Off<br><small>Starting Sunday</small>
+      </button>
+      <button class="sched-btn" onclick="selectSchedule('5-2')" id="sched-5-2">
+        <span class="sched-icon">📊</span>5-2 Split<br><small>P1: Mon–Fri · P2: Sat–Sun</small>
+      </button>
+      <button class="sched-btn" onclick="selectSchedule('3-4')" id="sched-3-4">
+        <span class="sched-icon">⚖️</span>3-4 Rotation<br><small>Alternating 3 and 4 days</small>
+      </button>
+      <button class="sched-btn" onclick="selectSchedule('custom')" id="sched-custom">
+        <span class="sched-icon">✏️</span>Manual / Custom<br><small>Tap days to assign</small>
+      </button>
+    </div>
+    <div class="form-row" id="schedule-options" style="display:none">
+      <label>Schedule starts on</label>
+      <input type="date" id="sched-start-date">
+      <label>First custody block goes to</label>
+      <select id="sched-first-parent">
+        <option value="p1">Parent 1</option>
+        <option value="p2">Parent 2</option>
+      </select>
+      <label>Apply to how many months ahead?</label>
+      <select id="sched-months">
+        <option value="3">3 months</option>
+        <option value="6">6 months</option>
+        <option value="12">12 months</option>
+      </select>
+      <button class="apply-btn" onclick="applySchedule()">✅ Apply Schedule</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Clear Calendar</h3>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">Remove all parent assignments (events are kept). This syncs to both parents.</p>
+    <button class="apply-btn" style="background:#e74c3c;" onclick="clearAssignments()">🗑️ Clear All Assignments</button>
+  </div>
+</section>
+
+<!-- ── EVENTS TAB ── -->
+<section id="tab-events">
+  <div class="events-filter">
+    <button class="filter-chip active" onclick="filterEvents('all',this)">All</button>
+    <button class="filter-chip" onclick="filterEvents('📚',this)">📚 School</button>
+    <button class="filter-chip" onclick="filterEvents('🏥',this)">🏥 Medical</button>
+    <button class="filter-chip" onclick="filterEvents('⚽',this)">⚽ Activity</button>
+    <button class="filter-chip" onclick="filterEvents('🎉',this)">🎉 Special</button>
+    <button class="filter-chip" onclick="filterEvents('📝',this)">📝 Note</button>
+  </div>
+  <ul class="events-list-full" id="events-list-full"></ul>
+</section>
+
+<!-- ── SETTINGS TAB ── -->
+<section id="tab-settings">
+
+  <div class="card">
+    <h3>📤 Share This Calendar</h3>
+    <div class="info-box">
+      <strong>How to invite the other parent:</strong>
+      Copy the join code below and send it to them (text, email, or WhatsApp). They open this same HTML file, tap "Join an Existing Calendar", and enter the code. Both of you will then share the same calendar with live updates.
+    </div>
+    <p style="font-size:0.78rem;font-weight:600;color:var(--muted);margin-bottom:6px;">YOUR JOIN CODE</p>
+    <div class="join-code-display">
+      <span class="code-text" id="settings-join-code">——</span>
+      <button class="copy-code-btn" onclick="copyJoinCode()">Copy Code</button>
+    </div>
+    <p style="font-size:0.75rem;color:var(--muted);">Keep this code private — anyone with it can view and edit your calendar.</p>
+  </div>
+
+  <div class="card">
+    <h3>Color Theme</h3>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Parent 1 Color</label>
+        <input type="color" id="color-p1" value="#4A90D9" onchange="updateColors()" style="width:50px;height:34px;border:none;cursor:pointer;border-radius:8px;">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Parent 2 Color</label>
+        <input type="color" id="color-p2" value="#E8734A" onchange="updateColors()" style="width:50px;height:34px;border:none;cursor:pointer;border-radius:8px;">
+      </div>
+    </div>
+    <button class="apply-btn" style="background:var(--muted);" onclick="resetColors()">Reset to Default Colors</button>
+  </div>
+
+  <div class="card">
+    <h3>How Firebase Sync Works</h3>
+    <p style="font-size:0.82rem;color:var(--muted);line-height:1.6;">
+      All calendar data is stored in <strong>Firebase Firestore</strong> — a free, real-time cloud database.
+      Changes from either parent appear on the other's screen within 1–3 seconds.
+      Your data is identified only by the join code — no accounts or passwords needed.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>⚙️ Firebase Setup Instructions</h3>
+    <p style="font-size:0.82rem;color:var(--muted);line-height:1.7;">
+      <strong>Step 1</strong> — Go to <strong>console.firebase.google.com</strong> and sign in with a Google account.<br>
+      <strong>Step 2</strong> — Click <em>Add project</em>, give it a name (e.g. "our-calendar"), skip Analytics, click <em>Create project</em>.<br>
+      <strong>Step 3</strong> — Inside your project, click the <strong>&lt;/&gt;</strong> (Web) icon to add a web app. Give it a nickname and click <em>Register app</em>.<br>
+      <strong>Step 4</strong> — Firebase shows you a <em>firebaseConfig</em> object. Copy all 6 values.<br>
+      <strong>Step 5</strong> — Open this HTML file in a text editor. Find the block labelled <code style="background:var(--bg);padding:2px 5px;border-radius:4px;font-size:0.78rem">PASTE YOUR FIREBASE CONFIG HERE</code> and replace each <code style="background:var(--bg);padding:2px 5px;border-radius:4px;font-size:0.78rem">YOUR_...</code> placeholder.<br>
+      <strong>Step 6</strong> — In Firebase console, go to <em>Firestore Database</em> → <em>Create database</em> → choose <em>Start in test mode</em> → pick any region → Done.<br>
+      <strong>Step 7</strong> — Save the file and open it in your browser. Done!
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>Backup &amp; Restore</h3>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;">Export a local JSON backup of your calendar data.</p>
+    <button class="apply-btn" onclick="exportData()">📤 Export Backup (copy to clipboard)</button>
+    <div style="margin-top:10px;">
+      <label style="font-size:0.8rem;font-weight:600;color:var(--muted);">Paste backup to restore:</label>
+      <textarea id="import-box" rows="4"
+        style="width:100%;margin-top:6px;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:0.75rem;background:var(--bg);resize:vertical;"></textarea>
+      <button class="apply-btn" style="margin-top:6px;" onclick="importData()">📥 Restore from Backup</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Disconnect</h3>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">Forget this calendar on this device. You can rejoin using the join code.</p>
+    <button class="apply-btn" style="background:#e74c3c;" onclick="disconnectCalendar()">🔌 Disconnect from Calendar</button>
+  </div>
+
+</section>
+
+</div><!-- /#main-app -->
+
+<!-- ══════════════ DAY MODAL ══════════════ -->
+<div class="overlay" id="day-overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-date-title"></h3>
+      <button class="close-btn" onclick="closeDayModal()">✕</button>
+    </div>
+    <p style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:6px;">ASSIGN TO</p>
+    <div class="parent-picker">
+      <button class="parent-btn p1"     id="btn-p1"     onclick="setParent('p1')">Parent 1</button>
+      <button class="parent-btn p2"     id="btn-p2"     onclick="setParent('p2')">Parent 2</button>
+      <button class="parent-btn shared" id="btn-shared" onclick="setParent('shared')">Shared</button>
+      <button class="parent-btn none"   id="btn-none"   onclick="setParent('none')">Clear</button>
+    </div>
+    <p style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:6px;margin-top:12px;">EVENTS &amp; NOTES</p>
+    <ul class="event-list" id="modal-event-list"></ul>
+    <div class="add-event-row">
+      <select id="event-icon-select">
+        <option>📚</option><option>🏥</option><option>⚽</option><option>🎉</option>
+        <option>🚗</option><option>📝</option><option>💊</option><option>🎂</option><option>✈️</option>
+      </select>
+      <input type="text" id="event-text-input" placeholder="Add a note or event…" maxlength="80"
+             onkeydown="if(event.key==='Enter') addEvent()">
+      <button onclick="addEvent()">Add</button>
+    </div>
+    <button class="save-btn" onclick="saveDayModal()">Save &amp; Sync</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════ SCRIPT ══════════════ -->
+<script>
+// ════════════════════════════════════════════════════════════════════
+//  PASTE YOUR FIREBASE CONFIG HERE
+//  Replace every YOUR_... value with the real values from Firebase console
+//  (Project Settings → Your Apps → SDK setup and configuration)
+// ════════════════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyD9UhuWFCo7faEaovUY4gLUuIp7NxE8T3I",
+  authDomain:        "our-calendar-e60dc.firebaseapp.com",
+  projectId:         "our-calendar-e60dc",
+  storageBucket:     "our-calendar-e60dc.firebasestorage.app",
+  messagingSenderId: "75026200784",
+  appId:             "1:75026200784:web:8ca935e7055a8ac5c546d5"
+};
+// ════════════════════════════════════════════════════════════════════
+
+// ── Constants ──────────────────────────────────────────────────────
+const MONTHS = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun',
+                      'Jul','Aug','Sep','Oct','Nov','Dec'];
+const COLLECTION = 'calendars';
+const LS_KEY_ID  = 'coparcal_calendarId';
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // avoids 0/O 1/I/l
+
+// ── App state ──────────────────────────────────────────────────────
+let state = {
+  names: { p1: 'Parent 1', p2: 'Parent 2' },
+  assignments: {},
+  events: {},
+  colors: { p1: '#4A90D9', p2: '#E8734A' },
+};
+let calendarId      = null;
+let db              = null;
+let unsubscribe     = null;
+let suppressWrite   = false;
+let writeTimer      = null;
+
+let currentYear, currentMonth;
+let selectedDate     = null;
+let modalAssignment  = null;
+let selectedSchedule = null;
+let eventsFilter     = 'all';
+
+// ── Firebase init ──────────────────────────────────────────────────
+function isConfigured() {
+  return !Object.values(FIREBASE_CONFIG).some(v => v.startsWith('YOUR_'));
+}
+
+function initFirebase() {
+  if (!isConfigured()) {
+    document.getElementById('config-error').style.display = 'flex';
+    return false;
+  }
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    db.settings({ experimentalForceLongPolling: false });
+    return true;
+  } catch(e) {
+    showScreen('config-error');
+    return false;
+  }
+}
+
+// ── Screens ────────────────────────────────────────────────────────
+function showScreen(id) {
+  ['config-error','loading-screen','setup-screen'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? 'flex' : 'none';
+  });
+  document.getElementById('main-app').style.display = id === 'app' ? 'block' : 'none';
+}
+
+// ── Startup ────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  if (!initFirebase()) return;
+
+  const savedId = localStorage.getItem(LS_KEY_ID);
+  if (savedId) {
+    connectToCalendar(savedId);
+  } else {
+    showScreen('setup-screen');
+  }
+});
+
+// ── Setup flows ────────────────────────────────────────────────────
+function generateCode() {
+  let code = '';
+  for (let i = 0; i < 6; i++) code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  return code;
+}
+
+async function showCreateFlow() {
+  const code = generateCode();
+  setLoadingMsg('Creating your calendar…');
+  showScreen('loading-screen');
+  try {
+    await db.collection(COLLECTION).doc(code).set(state);
+    localStorage.setItem(LS_KEY_ID, code);
+    await connectToCalendar(code);
+  } catch(e) {
+    alert('Could not create calendar. Check your Firebase config and try again.\n\n' + e.message);
+    showScreen('setup-screen');
+  }
+}
+
+async function joinCalendar() {
+  const raw = document.getElementById('join-code-input').value.trim().toUpperCase();
+  if (raw.length !== 6) { showToast('Enter all 6 characters of the join code.'); return; }
+
+  setLoadingMsg('Looking up calendar "' + raw + '"…');
+  showScreen('loading-screen');
+  try {
+    const doc = await db.collection(COLLECTION).doc(raw).get();
+    if (!doc.exists) {
+      showToast('Calendar not found. Double-check the code.');
+      showScreen('setup-screen');
+      return;
+    }
+    localStorage.setItem(LS_KEY_ID, raw);
+    await connectToCalendar(raw);
+  } catch(e) {
+    alert('Could not connect. Check your internet connection.\n\n' + e.message);
+    showScreen('setup-screen');
+  }
+}
+
+// ── Firebase connection ────────────────────────────────────────────
+async function connectToCalendar(id) {
+  calendarId = id;
+  setLoadingMsg('Loading calendar…');
+  showScreen('loading-screen');
+
+  // One-time fetch to populate state before showing UI
+  try {
+    const snap = await db.collection(COLLECTION).doc(calendarId).get();
+    if (snap.exists) applyRemoteData(snap.data());
+  } catch(e) { /* offline — will sync via listener */ }
+
+  initUI();
+  showScreen('app');
+  listenToFirestore();
+}
+
+function listenToFirestore() {
+  if (unsubscribe) unsubscribe();
+  unsubscribe = db.collection(COLLECTION).doc(calendarId)
+    .onSnapshot(snap => {
+      if (!snap.exists) return;
+      // Skip snapshots triggered by our own pending writes
+      if (snap.metadata.hasPendingWrites) return;
+      applyRemoteData(snap.data());
+      setSyncStatus('synced');
+    }, err => {
+      console.error('Firestore listener error:', err);
+      setSyncStatus('error');
+    });
+}
+
+function applyRemoteData(data) {
+  suppressWrite = true;
+  state = {
+    names:       { p1: 'Parent 1', p2: 'Parent 2', ...(data.names  || {}) },
+    assignments: data.assignments || {},
+    events:      data.events      || {},
+    colors:      { p1: '#4A90D9', p2: '#E8734A', ...(data.colors || {}) },
+  };
+  saveLocal();
+  // Refresh all UI that's currently visible
+  applyColors();
+  updateLegend();
+  renderCalendar();
+  renderEventsList();
+  syncSettingsFields();
+  suppressWrite = false;
+}
+
+// ── Firestore write (debounced) ────────────────────────────────────
+function scheduleWrite() {
+  if (suppressWrite) return;
+  setSyncStatus('syncing');
+  clearTimeout(writeTimer);
+  writeTimer = setTimeout(writeToFirestore, 900);
+}
+
+async function writeToFirestore() {
+  if (!calendarId || !db) return;
+  try {
+    await db.collection(COLLECTION).doc(calendarId).set(state);
+    setSyncStatus('synced');
+  } catch(e) {
+    setSyncStatus('error');
+    console.error('Write failed:', e);
+    showToast('Sync failed — check your connection.');
+  }
+}
+
+// ── Sync status indicator ──────────────────────────────────────────
+function setSyncStatus(status) {
+  const dot   = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  dot.className = 'sync-dot' + (status !== 'synced' ? ' ' + status : '');
+  label.textContent = status === 'synced' ? 'Synced'
+                    : status === 'syncing' ? 'Syncing…'
+                    : 'Offline';
+}
+
+// ── Local persistence (backup) ─────────────────────────────────────
+function saveLocal() {
+  localStorage.setItem('coparcal_state_' + calendarId, JSON.stringify(state));
+}
+
+function save() {
+  saveLocal();
+  scheduleWrite();
+}
+
+// ── UI Init ────────────────────────────────────────────────────────
+function initUI() {
+  const now = new Date();
+  currentYear  = now.getFullYear();
+  currentMonth = now.getMonth();
+
+  // Try restoring from local cache (for offline / fast load)
+  const cached = localStorage.getItem('coparcal_state_' + calendarId);
+  if (cached) {
+    try { state = JSON.parse(cached); } catch(e) {}
+  }
+
+  applyColors();
+  syncSettingsFields();
+  document.getElementById('sched-start-date').value = now.toISOString().slice(0,10);
+  document.getElementById('settings-join-code').textContent = calendarId;
+  document.getElementById('header-sub').textContent = 'Code: ' + calendarId;
+  renderCalendar();
+  renderEventsList();
+  updateLegend();
+}
+
+function syncSettingsFields() {
+  document.getElementById('name-p1').value  = state.names.p1;
+  document.getElementById('name-p2').value  = state.names.p2;
+  document.getElementById('color-p1').value = state.colors.p1;
+  document.getElementById('color-p2').value = state.colors.p2;
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  const map = { calendar:0, schedule:1, events:2, settings:3 };
+  document.querySelectorAll('nav button')[map[id]].classList.add('active');
+  if (id === 'events') renderEventsList();
+  if (id === 'calendar') renderCalendar();
+}
+
+// ── Calendar render ────────────────────────────────────────────────
+function changeMonth(dir) {
+  currentMonth += dir;
+  if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+  if (currentMonth > 11) { currentMonth = 0;  currentYear++; }
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const lbl = document.getElementById('month-label');
+  if (!lbl) return;
+  lbl.textContent = MONTHS[currentMonth] + ' ' + currentYear;
+
+  const container = document.getElementById('cal-days');
+  container.innerHTML = '';
+
+  const firstDay     = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth  = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const today        = new Date();
+  const todayKey     = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement('div');
+    el.className = 'cal-day empty';
+    container.appendChild(el);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key        = dateKey(currentYear, currentMonth, d);
+    const assignment = state.assignments[key] || 'none';
+    const events     = state.events[key] || [];
+
+    const el = document.createElement('div');
+    el.className = 'cal-day' + (assignment !== 'none' ? ' ' + assignment : '');
+    if (key === todayKey) el.classList.add('today');
+    el.onclick = () => openDayModal(currentYear, currentMonth, d);
+
+    const numEl = document.createElement('div');
+    numEl.className = 'day-num';
+    numEl.textContent = d;
+    el.appendChild(numEl);
+
+    if (assignment !== 'none') {
+      const lbl2 = document.createElement('div');
+      lbl2.className = 'day-label';
+      lbl2.textContent = assignment === 'shared' ? 'Shared'
+                       : assignment === 'p1' ? state.names.p1 : state.names.p2;
+      el.appendChild(lbl2);
+    }
+
+    if (events.length > 0) {
+      const dots = document.createElement('div');
+      dots.className = 'event-dots';
+      events.slice(0, 4).forEach(() => {
+        const dot = document.createElement('div');
+        dot.className = 'event-dot';
+        dots.appendChild(dot);
+      });
+      el.appendChild(dots);
+    }
+    container.appendChild(el);
+  }
+}
+
+function dateKey(y, m, d) {
+  return y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+}
+
+// ── Day modal ──────────────────────────────────────────────────────
+function openDayModal(y, m, d) {
+  selectedDate     = dateKey(y, m, d);
+  modalAssignment  = state.assignments[selectedDate] || 'none';
+
+  const dateObj = new Date(y, m, d);
+  document.getElementById('modal-date-title').textContent =
+    dateObj.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
+
+  document.getElementById('btn-p1').textContent = state.names.p1;
+  document.getElementById('btn-p2').textContent = state.names.p2;
+  updateParentBtns();
+  renderModalEvents();
+  document.getElementById('event-text-input').value = '';
+  document.getElementById('day-overlay').classList.add('open');
+}
+
+function closeDayModal() {
+  document.getElementById('day-overlay').classList.remove('open');
+  selectedDate = null;
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('day-overlay')) closeDayModal();
+}
+
+function setParent(p) { modalAssignment = p; updateParentBtns(); }
+
+function updateParentBtns() {
+  ['p1','p2','shared','none'].forEach(p =>
+    document.getElementById('btn-' + p).classList.toggle('active', modalAssignment === p));
+}
+
+function renderModalEvents() {
+  const list = document.getElementById('modal-event-list');
+  list.innerHTML = '';
+  const events = state.events[selectedDate] || [];
+  if (events.length === 0) {
+    list.innerHTML = '<li style="color:var(--muted);font-size:0.8rem;background:none;padding:4px 0;">No events yet.</li>';
+    return;
+  }
+  events.forEach((ev, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="event-icon">${ev.icon}</span>
+      <span class="event-text">${escHtml(ev.text)}</span>
+      <button class="del-btn" onclick="deleteEvent(${i})">✕</button>`;
+    list.appendChild(li);
+  });
+}
+
+function addEvent() {
+  const icon = document.getElementById('event-icon-select').value;
+  const text = document.getElementById('event-text-input').value.trim();
+  if (!text) return;
+  if (!state.events[selectedDate]) state.events[selectedDate] = [];
+  state.events[selectedDate].push({ icon, text });
+  document.getElementById('event-text-input').value = '';
+  renderModalEvents();
+}
+
+function deleteEvent(idx) {
+  state.events[selectedDate].splice(idx, 1);
+  if (state.events[selectedDate].length === 0) delete state.events[selectedDate];
+  renderModalEvents();
+}
+
+function saveDayModal() {
+  if (modalAssignment === 'none') {
+    delete state.assignments[selectedDate];
+  } else {
+    state.assignments[selectedDate] = modalAssignment;
+  }
+  save();
+  closeDayModal();
+  renderCalendar();
+  showToast('Saved and syncing…');
+}
+
+// ── Schedule templates ─────────────────────────────────────────────
+function selectSchedule(id) {
+  selectedSchedule = id;
+  document.querySelectorAll('.sched-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('sched-' + id).classList.add('selected');
+  const opt = document.getElementById('schedule-options');
+  if (id === 'custom') { opt.style.display = 'none'; showToast('Tap any day on the calendar to assign.'); }
+  else opt.style.display = 'flex';
+}
+
+function applySchedule() {
+  if (!selectedSchedule || selectedSchedule === 'custom') return;
+  const startStr = document.getElementById('sched-start-date').value;
+  if (!startStr) { showToast('Please pick a start date.'); return; }
+
+  const startDate   = new Date(startStr + 'T00:00:00');
+  const firstParent = document.getElementById('sched-first-parent').value;
+  const months      = parseInt(document.getElementById('sched-months').value);
+  const endDate     = new Date(startDate);
+  endDate.setMonth(endDate.getMonth() + months);
+
+  let cur = new Date(startDate), dayIdx = 0;
+  while (cur <= endDate) {
+    const key = dateKey(cur.getFullYear(), cur.getMonth(), cur.getDate());
+    const dow = cur.getDay();
+    let assignment;
+
+    if (selectedSchedule === 'alt-week' || selectedSchedule === 'week-on-off') {
+      assignment = (Math.floor(dayIdx / 7) % 2 === 0) ? firstParent : otherParent(firstParent);
+    } else if (selectedSchedule === '223') {
+      const cp = dayIdx % 14;
+      if      (cp < 2)  assignment = firstParent;
+      else if (cp < 4)  assignment = otherParent(firstParent);
+      else if (cp < 7)  assignment = firstParent;
+      else if (cp < 9)  assignment = otherParent(firstParent);
+      else if (cp < 11) assignment = firstParent;
+      else              assignment = otherParent(firstParent);
+    } else if (selectedSchedule === '5-2') {
+      assignment = (dow === 0 || dow === 6) ? otherParent(firstParent) : firstParent;
+    } else if (selectedSchedule === '3-4') {
+      assignment = (dayIdx % 7 < 3) ? firstParent : otherParent(firstParent);
+    }
+
+    if (assignment) state.assignments[key] = assignment;
+    cur.setDate(cur.getDate() + 1);
+    dayIdx++;
+  }
+
+  save();
+  renderCalendar();
+  showToast('Schedule applied for ' + months + ' months — syncing…');
+  showTab('calendar');
+}
+
+function otherParent(p) { return p === 'p1' ? 'p2' : 'p1'; }
+
+function clearAssignments() {
+  if (!confirm('Clear all parent assignments? Events will be kept. This will sync to the other parent too.')) return;
+  state.assignments = {};
+  save();
+  renderCalendar();
+  showToast('Cleared — syncing…');
+}
+
+// ── Events list ────────────────────────────────────────────────────
+function filterEvents(f, btn) {
+  eventsFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderEventsList();
+}
+
+function renderEventsList() {
+  const list = document.getElementById('events-list-full');
+  if (!list) return;
+  list.innerHTML = '';
+
+  const all = [];
+  for (const [key, evs] of Object.entries(state.events)) {
+    evs.forEach(ev => all.push({ key, ev }));
+  }
+  all.sort((a, b) => a.key.localeCompare(b.key));
+
+  const filtered = eventsFilter === 'all' ? all : all.filter(({ ev }) => ev.icon === eventsFilter);
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="es-icon">📋</div>
+      <p>No events yet.<br>Tap a day on the calendar to add one.</p></div>`;
+    return;
+  }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  filtered.forEach(({ key, ev }) => {
+    const [y, m, d] = key.split('-').map(Number);
+    const isPast    = key < todayStr;
+    const a         = state.assignments[key];
+    const parentName = a === 'p1' ? state.names.p1 : a === 'p2' ? state.names.p2 : a === 'shared' ? 'Shared' : '—';
+    const li = document.createElement('li');
+    if (isPast) li.style.opacity = '0.55';
+    li.innerHTML = `
+      <div class="event-date-badge">
+        <div class="edb-month">${SHORT_MONTHS[m-1]}</div>
+        <div class="edb-day">${d}</div>
+      </div>
+      <div class="event-body">
+        <div class="ev-title">${escHtml(ev.text)}</div>
+        <div class="ev-meta">${parentName}${isPast ? ' · Past' : ''}</div>
+      </div>
+      <div class="ev-icon-large">${ev.icon}</div>`;
+    list.appendChild(li);
+  });
+}
+
+// ── Settings ───────────────────────────────────────────────────────
+function saveNames() {
+  state.names.p1 = document.getElementById('name-p1').value.trim() || 'Parent 1';
+  state.names.p2 = document.getElementById('name-p2').value.trim() || 'Parent 2';
+  save();
+  updateLegend();
+  renderCalendar();
+}
+
+function updateLegend() {
+  const lp1 = document.getElementById('legend-p1');
+  const lp2 = document.getElementById('legend-p2');
+  if (lp1) lp1.textContent = state.names.p1;
+  if (lp2) lp2.textContent = state.names.p2;
+}
+
+function updateColors() {
+  state.colors.p1 = document.getElementById('color-p1').value;
+  state.colors.p2 = document.getElementById('color-p2').value;
+  save();
+  applyColors();
+  renderCalendar();
+}
+
+function applyColors() {
+  document.documentElement.style.setProperty('--p1', state.colors.p1);
+  document.documentElement.style.setProperty('--p2', state.colors.p2);
+  document.documentElement.style.setProperty('--p1-light', hexToRgba(state.colors.p1, 0.22));
+  document.documentElement.style.setProperty('--p2-light', hexToRgba(state.colors.p2, 0.22));
+}
+
+function hexToRgba(hex, a) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function resetColors() {
+  state.colors = { p1: '#4A90D9', p2: '#E8734A' };
+  document.getElementById('color-p1').value = '#4A90D9';
+  document.getElementById('color-p2').value = '#E8734A';
+  save();
+  applyColors();
+  renderCalendar();
+}
+
+function copyJoinCode() {
+  const code = calendarId || '——';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(code).then(() => showToast('Join code copied!'));
+  } else {
+    showToast('Your code: ' + code);
+  }
+}
+
+function disconnectCalendar() {
+  if (!confirm('Forget this calendar on this device? You can rejoin later with the join code: ' + calendarId)) return;
+  if (unsubscribe) unsubscribe();
+  localStorage.removeItem(LS_KEY_ID);
+  localStorage.removeItem('coparcal_state_' + calendarId);
+  location.reload();
+}
+
+// ── Backup / restore ───────────────────────────────────────────────
+function exportData() {
+  const json = JSON.stringify(state, null, 2);
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(json).then(() => showToast('Backup copied to clipboard!'));
+  } else {
+    document.getElementById('import-box').value = json;
+    showToast('Data shown below — copy manually.');
+  }
+}
+
+function importData() {
+  const raw = document.getElementById('import-box').value.trim();
+  if (!raw) { showToast('Paste backup data first.'); return; }
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed.assignments || !parsed.events) throw new Error('Invalid format');
+    state = parsed;
+    save();
+    applyColors();
+    syncSettingsFields();
+    updateLegend();
+    renderCalendar();
+    renderEventsList();
+    showToast('Restored and syncing…');
+  } catch(e) {
+    showToast('Invalid backup data — check and try again.');
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function setLoadingMsg(msg) {
+  document.getElementById('loading-msg').textContent = msg;
+}
+</script>
+</body>
+</html>
