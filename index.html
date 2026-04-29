@@ -291,12 +291,6 @@ section.active { display: block; }
 .chat-send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--p1); color: #fff; font-size: 1.1rem; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: opacity 0.15s, transform 0.1s; }
 .chat-send-btn:hover  { opacity: 0.88; }
 .chat-send-btn:active { transform: scale(0.92); }
-.rephrase-btn { width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(123,104,238,0.35); background: rgba(123,104,238,0.1); color: var(--shared); font-size: 0.88rem; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.15s, opacity 0.15s; }
-.rephrase-btn:hover:not(:disabled) { background: rgba(123,104,238,0.22); }
-.rephrase-btn:disabled { opacity: 0.45; cursor: default; }
-.rephrase-btn.rp-loading { font-size: 0; }
-.rephrase-btn.rp-loading::after { content: ''; display: block; width: 13px; height: 13px; border: 2px solid rgba(123,104,238,0.25); border-top-color: var(--shared); border-radius: 50%; animation: spin 0.7s linear infinite; }
-
 /* ── Thread description chip ── */
 .thread-desc { font-size: 0.7rem; color: var(--muted); text-align: center; padding: 6px; border-bottom: 1px solid var(--border); background: var(--bg); flex-shrink: 0; }
 
@@ -493,8 +487,7 @@ section.active { display: block; }
       <textarea id="msg-input" rows="1" placeholder="Type a message…" maxlength="1000"
         oninput="autoResizeTextarea(this)"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
-      <button id="rephrase-btn" class="rephrase-btn" onclick="rephraseMessage()" title="Rephrase with AI" style="display:none">✨</button>
-      <button class="chat-send-btn" onclick="sendMessage()" title="Send">➤</button>
+<button class="chat-send-btn" onclick="sendMessage()" title="Send">➤</button>
     </div>
   </div>
 </section>
@@ -1295,7 +1288,6 @@ function openMessagesTab() {
   renderMessages();
   clearThreadUnread(currentThread);
   scrollChat();
-  updateRephraseBtn();
 }
 
 // ── Messages: thread tab bar ───────────────────────────────────────
@@ -1324,7 +1316,6 @@ function switchThread(threadId) {
   renderMessages();
   clearThreadUnread(threadId);
   scrollChat();
-  updateRephraseBtn();
 }
 
 // ── Messages: Firestore listener per thread ────────────────────────
@@ -1437,58 +1428,6 @@ function updateNavUnreadBadge() {
 function scrollChat() {
   const c = document.getElementById('chat-messages');
   if (c) requestAnimationFrame(() => { c.scrollTop = c.scrollHeight; });
-}
-
-// ── AI Rephrase ────────────────────────────────────────────────────
-function updateRephraseBtn() {
-  const btn = document.getElementById('rephrase-btn');
-  if (!btn) return;
-  btn.style.display = (currentThread !== 'family') ? 'flex' : 'none';
-}
-
-async function rephraseMessage() {
-  const input = document.getElementById('msg-input');
-  const text  = (input.value || '').trim();
-  if (!text) return;
-
-  const btn = document.getElementById('rephrase-btn');
-  btn.disabled = true;
-  btn.classList.add('rp-loading');
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-request-allowed': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 200,
-        messages: [{
-          role: 'user',
-          content: 'Rewrite the following co-parenting message to be calm, respectful, and focused on the child\'s needs. Remove any hostile, accusatory, or emotional language. Keep the core information and intent intact. Keep it brief and factual. Return only the rewritten message text with no explanation or preamble:\n\n' + text,
-        }],
-      }),
-    });
-
-    if (!res.ok) throw new Error('API ' + res.status);
-    const data = await res.json();
-    const rephrased = (data.content[0].text || '').trim();
-    if (rephrased) {
-      input.value = rephrased;
-      autoResizeTextarea(input);
-      input.focus();
-    } else {
-      throw new Error('empty response');
-    }
-  } catch(e) {
-    showToast('Rephrase unavailable — try again.');
-  } finally {
-    btn.disabled = false;
-    btn.classList.remove('rp-loading');
-  }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────
